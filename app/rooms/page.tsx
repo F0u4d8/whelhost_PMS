@@ -25,6 +25,7 @@ import {
   Crown,
   LogOut
 } from "lucide-react";
+import { createServiceRoleClient } from "@/lib/hotels/public-hotels-service";
 
 interface RoomType {
   id: string;
@@ -75,8 +76,11 @@ export default async function AllRoomsPage() {
   // Get the hotel owned by the user
   const { data: hotel } = await supabase.from("hotels").select("id").eq("owner_id", user?.id).single();
 
+  // Use service role client to bypass RLS and fetch all public units
+  const serviceRoleClient = createServiceRoleClient();
+
   // Show all available rooms to all users (both with and without hotels)
-  const { data: units, error } = await supabase
+  const { data: units, error } = await serviceRoleClient
     .from("units")
     .select(`
       id,
@@ -115,7 +119,7 @@ export default async function AllRoomsPage() {
   const roomTypeIds = [...new Set(units.filter(unit => unit.room_type_id).map(unit => unit.room_type_id))];
   let roomTypes = [];
   if (roomTypeIds.length > 0) {
-    const { data: fetchedRoomTypes, error: roomTypeError } = await supabase
+    const { data: fetchedRoomTypes, error: roomTypeError } = await serviceRoleClient
       .from("room_types")
       .select("*")
       .in("id", roomTypeIds);
@@ -128,7 +132,7 @@ export default async function AllRoomsPage() {
   const hotelIds = [...new Set(units.map(unit => unit.hotel_id))];
   let hotels = [];
   if (hotelIds.length > 0) {
-    const { data: fetchedHotels, error: hotelsError } = await supabase
+    const { data: fetchedHotels, error: hotelsError } = await serviceRoleClient
       .from("hotels")
       .select("id, name")
       .in("id", hotelIds);
@@ -255,7 +259,7 @@ export default async function AllRoomsPage() {
 // Header component extracted for reusability
 function Header({ user, userProfile }: { user: any, userProfile: any }) {
   return (
-    <header className="sticky top-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
+    <header className="fixed top-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-b border-border/30">
       <div className="mx-auto flex h-20 max-w-7xl items-center justify-between px-6 lg:px-8">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-2">

@@ -1,3 +1,4 @@
+import { Star } from "lucide-react";
 import { ClientRoomsSection } from "./client-rooms-section";
 
 // Server Component - fetches data from Supabase

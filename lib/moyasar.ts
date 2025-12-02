@@ -2,24 +2,12 @@
 
 // Configuration from environment variables or defaults
 export const MOYASAR_CONFIG = {
-  publicKey: process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY ||
-             (process.env.NODE_ENV === 'development' ?
-              "pk_test_5485343124345345345345345345345345345345" :
-              "pk_live_WrJcXqsLLXJe82aYmENsdrqNtMV3cMsVfXp8hf3e"),
-  secretKey: process.env.MOYASAR_SECRET_KEY ||
-             (process.env.NODE_ENV === 'development' ?
-              "sk_test_5485343124345345345345345345345345345345" :
-              "sk_live_VQiVB5JWk5NrSoupUaBfxnHSZYxQzMUnTvdvn3Xu"),
-  apiUrl: process.env.MOYASAR_API_URL ||
-          (process.env.NODE_ENV === 'development' ?
-           "https://api-test.moyasar.com/v1/" :
-           "https://api.moyasar.com/v1/"),
+  publicKey: process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY,
+  secretKey: process.env.MOYASAR_SECRET_KEY,
+  apiUrl: process.env.MOYASAR_API_URL || (process.env.NODE_ENV === 'development' ? "https://api-test.moyasar.com/v1/" : "https://api.moyasar.com/v1/"),
   currency: process.env.MOYASAR_CURRENCY || "SAR", // Saudi Riyal
-  publishableKey: process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY ||
-                  (process.env.NODE_ENV === 'development' ?
-                   "pk_test_5485343124345345345345345345345345345345" :
-                   "pk_live_WrJcXqsLLXJe82aYmENsdrqNtMV3cMsVfXp8hf3e"),
-  supportedNetworks: process.env.MOYASAR_SUPPORTED_NETWORKS?.split(',') || ['mada'], // Only show Mada for a simpler interface
+  publishableKey: process.env.NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY,
+  supportedNetworks: process.env.MOYASAR_SUPPORTED_NETWORKS?.split(',') || ['mada'],
 };
 
 export type PlanId = 'monthly' | 'yearly';

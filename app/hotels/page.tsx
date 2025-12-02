@@ -226,6 +226,15 @@ export default async function HotelsPage() {
                     </p>
                   </div>
                 )}
+
+                {/* View hotel details button */}
+                <div className="mt-4 pt-4 border-t border-border/30">
+                  <Button size="sm" variant="outline" className="w-full rounded-lg border-amber-800/30" asChild>
+                    <Link href={`/hotels/${hotel.id}`}>
+                      View Hotel Details
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
