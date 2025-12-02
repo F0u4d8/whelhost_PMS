@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import Link from "next/link"
-import { Plus, BedDouble, MoreVertical, Pencil, Eye, EyeOff } from "lucide-react"
+import { Plus, BedDouble, MoreVertical, Pencil } from "lucide-react"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { DeleteUnitButton } from "@/components/dashboard/delete-unit-button"
+import { UnitVisibilityToggle } from "@/components/dashboard/unit-visibility-toggle"
 
 const statusColors = {
   available: "bg-success/10 text-success border-success/20",
@@ -123,19 +124,10 @@ export default async function UnitsPage() {
                       </Badge>
                     </TableCell>
                     <TableCell>
-                      <Badge variant={unit.is_visible ? "default" : "secondary"}>
-                        {unit.is_visible ? (
-                          <>
-                            <Eye className="mr-1 h-3 w-3" />
-                            Shown
-                          </>
-                        ) : (
-                          <>
-                            <EyeOff className="mr-1 h-3 w-3" />
-                            Hidden
-                          </>
-                        )}
-                      </Badge>
+                      <UnitVisibilityToggle
+                        unitId={unit.id}
+                        currentVisibility={Boolean(unit.is_visible)}
+                      />
                     </TableCell>
                     <TableCell>{unit.room_type?.base_price ? `${unit.room_type.base_price} SAR` : "-"}</TableCell>
                     <TableCell>
