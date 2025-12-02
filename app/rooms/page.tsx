@@ -88,8 +88,10 @@ export default async function AllRoomsPage() {
       notes,
       room_type_id,
       status,
-      hotel_id
+      hotel_id,
+      is_visible
     `)
+    .eq("is_visible", true)
     .not("status", "eq", "maintenance");
 
   if (error) {

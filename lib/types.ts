@@ -54,6 +54,7 @@ export interface Unit {
   status: "available" | "occupied" | "maintenance" | "blocked"
   smart_lock_id: string | null
   notes: string | null
+  is_visible: boolean
   created_at: string
   updated_at: string
   room_type?: RoomType

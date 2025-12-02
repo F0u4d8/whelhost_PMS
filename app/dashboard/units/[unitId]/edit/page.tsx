@@ -24,7 +24,7 @@ export default async function EditUnitPage({ params }: Props) {
   // Get the unit data
   const { data: unit } = await supabase
     .from("units")
-    .select("*")
+    .select("id, name, room_type_id, floor, status, smart_lock_id, notes, is_visible, created_at, updated_at")
     .eq("id", params.unitId)
     .eq("hotel_id", hotel.id)
     .single() as { data: Unit | null }

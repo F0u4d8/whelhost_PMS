@@ -46,6 +46,8 @@ export function BookingForm({ hotelId, currency, units, guests, booking }: Booki
     last_name: "",
     email: "",
     phone: "",
+    nationality: "USA",
+    id_number: "",
   })
 
   const selectedUnit = units.find((u) => u.id === formData.unit_id)
@@ -273,6 +275,53 @@ export function BookingForm({ hotelId, currency, units, guests, booking }: Booki
                     type="tel"
                     value={newGuest.phone}
                     onChange={(e) => setNewGuest({ ...newGuest, phone: e.target.value })}
+                    className="border-white"
+                  />
+                </div>
+              </div>
+
+              {/* Additional Guest Information */}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="nationality">Country</Label>
+                  <Select
+                    value={newGuest.nationality}
+                    onValueChange={(value) => setNewGuest({ ...newGuest, nationality: value })}
+                  >
+                    <SelectTrigger className="border-white">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USA">United States</SelectItem>
+                      <SelectItem value="GBR">United Kingdom</SelectItem>
+                      <SelectItem value="CAN">Canada</SelectItem>
+                      <SelectItem value="AUS">Australia</SelectItem>
+                      <SelectItem value="DEU">Germany</SelectItem>
+                      <SelectItem value="FRA">France</SelectItem>
+                      <SelectItem value="JPN">Japan</SelectItem>
+                      <SelectItem value="CHN">China</SelectItem>
+                      <SelectItem value="IND">India</SelectItem>
+                      <SelectItem value="BRA">Brazil</SelectItem>
+                      <SelectItem value="MEX">Mexico</SelectItem>
+                      <SelectItem value="RUS">Russia</SelectItem>
+                      <SelectItem value="KOR">South Korea</SelectItem>
+                      <SelectItem value="SAU">Saudi Arabia</SelectItem>
+                      <SelectItem value="SGP">Singapore</SelectItem>
+                      <SelectItem value="ZAF">South Africa</SelectItem>
+                      <SelectItem value="NGA">Nigeria</SelectItem>
+                      <SelectItem value="EGY">Egypt</SelectItem>
+                      <SelectItem value="TUR">Turkey</SelectItem>
+                      <SelectItem value="Other">Other</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="id_number">National ID Card</Label>
+                  <Input
+                    id="id_number"
+                    value={newGuest.id_number}
+                    onChange={(e) => setNewGuest({ ...newGuest, id_number: e.target.value })}
+                    placeholder="National ID/Passport number"
                     className="border-white"
                   />
                 </div>

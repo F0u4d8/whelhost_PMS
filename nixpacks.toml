@@ -23,4 +23,4 @@
 [config]
   # Next.js specific configurations
   NODE_ENV = "production"
-  NEXT_TELEMETRY_DISABLED = "1"
+  NEXT_TELEMETRY_DISABLED = "1" 

@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardContent } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 import { Loader2, Upload, X } from "lucide-react"
 import type { RoomType, Unit } from "@/lib/types"
@@ -30,6 +31,7 @@ export function UnitForm({ hotelId, roomTypes, unit }: UnitFormProps) {
     floor: unit?.floor?.toString() || "",
     status: unit?.status || "available",
     notes: unit?.notes || "",
+    is_visible: unit?.is_visible ?? true,
   })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -114,6 +116,7 @@ export function UnitForm({ hotelId, roomTypes, unit }: UnitFormProps) {
       floor: formData.floor ? Number.parseInt(formData.floor) : null,
       status: formData.status,
       notes: formData.notes || null,
+      is_visible: formData.is_visible,
     }
 
     let unitId: string | undefined
@@ -211,6 +214,20 @@ export function UnitForm({ hotelId, roomTypes, unit }: UnitFormProps) {
                 <SelectItem value="blocked">Blocked</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="is_visible">Show in Rooms Page</Label>
+              <Switch
+                id="is_visible"
+                checked={formData.is_visible}
+                onCheckedChange={(checked) => setFormData({ ...formData, is_visible: checked })}
+              />
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Toggle this to show or hide this unit on the public rooms page
+            </p>
           </div>
 
           <div className="space-y-2">

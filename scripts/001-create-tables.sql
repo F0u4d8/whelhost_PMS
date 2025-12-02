@@ -61,6 +61,7 @@ CREATE TABLE IF NOT EXISTS public.units (
   status TEXT DEFAULT 'available' CHECK (status IN ('available', 'occupied', 'maintenance', 'blocked')),
   smart_lock_id TEXT,
   notes TEXT,
+  is_visible BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
