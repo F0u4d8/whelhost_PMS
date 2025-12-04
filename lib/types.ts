@@ -55,6 +55,8 @@ export interface Unit {
   smart_lock_id: string | null
   notes: string | null
   is_visible: boolean
+  base_price: number | null
+  service_charges: number | null
   created_at: string
   updated_at: string
   room_type?: RoomType

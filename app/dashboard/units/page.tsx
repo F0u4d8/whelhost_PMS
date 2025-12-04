@@ -108,7 +108,9 @@ export default async function UnitsPage() {
                   <TableHead>Floor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Visibility</TableHead>
-                  <TableHead>Base Price</TableHead>
+                  <TableHead>Unit Price</TableHead>
+                  <TableHead>Service Charges</TableHead>
+                  <TableHead>Total</TableHead>
                   <TableHead className="w-[50px]"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -129,7 +131,13 @@ export default async function UnitsPage() {
                         currentVisibility={Boolean(unit.is_visible)}
                       />
                     </TableCell>
-                    <TableCell>{unit.room_type?.base_price ? `${unit.room_type.base_price} SAR` : "-"}</TableCell>
+                    <TableCell>{unit.base_price ? `${unit.base_price} SAR` : "-"}</TableCell>
+                    <TableCell>{unit.service_charges ? `${unit.service_charges} SAR` : "-"}</TableCell>
+                    <TableCell>
+                      {unit.base_price !== null || unit.service_charges !== null ?
+                        `${((unit.base_price || 0) + (unit.service_charges || 0)).toFixed(2)} SAR`
+                        : "-"}
+                    </TableCell>
                     <TableCell>
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>

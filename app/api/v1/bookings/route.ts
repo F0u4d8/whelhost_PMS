@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
 
   const body = await request.json()
   const {
-    hotel_id,
+    hotel_id, // Received from the form but will be validated
     unit_id,
     guest_id,
     guest, // For creating new guest inline
@@ -85,6 +85,7 @@ export async function POST(request: NextRequest) {
     notes,
     special_requests,
     source = "direct",
+    status = "confirmed", // Allow status to be passed from form for edit functionality
   } = body
 
   // Verify hotel ownership
@@ -144,7 +145,7 @@ export async function POST(request: NextRequest) {
       notes,
       special_requests,
       source,
-      status: "confirmed",
+      status, // Use the status passed from the form
       paid_amount: 0,
     })
     .select(`
@@ -160,7 +161,7 @@ export async function POST(request: NextRequest) {
 
   // Update unit status to occupied if check-in is today
   const today = new Date().toISOString().split("T")[0]
-  if (unit_id && check_in === today) {
+  if (unit_id && check_in === today && status === "confirmed") {
     await supabase.from("units").update({ status: "occupied" }).eq("id", unit_id)
   }
 

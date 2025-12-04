@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server"
 import { NotificationService } from "@/lib/notifications"
 import { type NextRequest, NextResponse } from "next/server"
+import { nanoid } from "nanoid"
 
 // POST /api/v1/bookings/[id]/check-out
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -83,5 +84,35 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     created_by: user.id,
   })
 
-  return NextResponse.json({ data: updatedBooking })
+  // Generate access token for guest to view their bill
+  const guestAccessToken = nanoid(16); // Generate a short unique token
+
+  await supabase
+    .from("guest_access_tokens")
+    .insert({
+      booking_id: id,
+      token: guestAccessToken,
+      expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(), // 1 year expiry
+      created_by: user.id,
+    })
+
+  // Send message to guest with bill access link
+  const baseUrl = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+  const billAccessUrl = `${baseUrl}/guest/bill?token=${guestAccessToken}`;
+
+  // Optionally send email to guest with the bill link
+  await supabase.from("messages").insert({
+    hotel_id: booking.hotel_id,
+    booking_id: id,
+    recipient_id: updatedBooking.guest?.id, // Assuming guest has a user_id
+    subject: "Your Checkout Bill & Receipt",
+    content: `Thank you for staying with us! Your checkout is complete. You can access and print your bill at: ${billAccessUrl}\n\nThis link allows you to print or download your receipt for your records.`,
+    message_type: "system",
+    is_read: false,
+  })
+
+  return NextResponse.json({
+    data: updatedBooking,
+    bill_access_url: billAccessUrl
+  })
 }

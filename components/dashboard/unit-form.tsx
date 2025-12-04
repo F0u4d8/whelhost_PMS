@@ -1,7 +1,6 @@
 "use client"
 
-import type React from "react"
-import { useState, useRef, ChangeEvent } from "react"
+import { useState, useRef, ChangeEvent, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -32,9 +31,20 @@ export function UnitForm({ hotelId, roomTypes, unit }: UnitFormProps) {
     status: unit?.status || "available",
     notes: unit?.notes || "",
     is_visible: unit?.is_visible ?? true,
+    base_price: unit?.base_price?.toString() || "",
+    service_charges: unit?.service_charges?.toString() || "",
   })
 
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [totalPrice, setTotalPrice] = useState<number | null>(null)
+
+  // Update total price when base_price or service_charges change
+  useEffect(() => {
+    const basePrice = parseFloat(formData.base_price) || 0
+    const serviceCharges = parseFloat(formData.service_charges) || 0
+    const total = basePrice + serviceCharges
+    setTotalPrice(total > 0 ? total : null)
+  }, [formData.base_price, formData.service_charges])
 
   // Handle image file selection
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -117,6 +127,8 @@ export function UnitForm({ hotelId, roomTypes, unit }: UnitFormProps) {
       status: formData.status,
       notes: formData.notes || null,
       is_visible: formData.is_visible,
+      base_price: formData.base_price ? parseFloat(formData.base_price) : null,
+      service_charges: formData.service_charges ? parseFloat(formData.service_charges) : null,
     }
 
     let unitId: string | undefined
@@ -222,6 +234,49 @@ export function UnitForm({ hotelId, roomTypes, unit }: UnitFormProps) {
               />
             </div>
           </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="base_price">Base Price (SAR)</Label>
+              <Input
+                id="base_price"
+                type="number"
+                placeholder="0.00"
+                value={formData.base_price}
+                onChange={(e) => setFormData({ ...formData, base_price: e.target.value })}
+                min="0"
+                step="0.01"
+                className="border-white"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="service_charges">Service Charges (SAR)</Label>
+              <Input
+                id="service_charges"
+                type="number"
+                placeholder="0.00"
+                value={formData.service_charges}
+                onChange={(e) => setFormData({ ...formData, service_charges: e.target.value })}
+                min="0"
+                step="0.01"
+                className="border-white"
+              />
+            </div>
+          </div>
+
+          {/* Total Price Display */}
+          {totalPrice !== null && (
+            <div className="space-y-2 p-4 bg-muted rounded-md">
+              <Label>Total Price (SAR)</Label>
+              <div className="text-2xl font-bold text-primary">
+                {totalPrice.toFixed(2)} SAR
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Base Price ({formData.base_price || '0.00'}) + Service Charges ({formData.service_charges || '0.00'})
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="status">Status</Label>

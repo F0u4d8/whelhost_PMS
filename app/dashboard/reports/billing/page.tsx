@@ -4,16 +4,17 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { 
-  Calendar, 
-  CreditCard, 
-  Download, 
-  Printer, 
-  Share2, 
-  TrendingDown, 
+import {
+  Calendar,
+  CreditCard,
+  Download,
+  Printer,
+  Share2,
+  TrendingDown,
   TrendingUp,
   Search,
-  Filter
+  Filter,
+  FileText
 } from "lucide-react";
 import { format } from "date-fns";
 
@@ -46,6 +47,27 @@ interface Payment {
   created_at: string;
   reference?: string;
   notes?: string;
+}
+
+interface Invoice {
+  id: string;
+  invoice_number: string;
+  status: string;
+  subtotal: number;
+  tax_amount: number;
+  total_amount: number;
+  created_at: string;
+  notes?: string;
+}
+
+interface InvoiceItem {
+  id: string;
+  invoice_id: string;
+  description: string;
+  quantity: number;
+  unit_price: number;
+  total_price: number;
+  created_at: string;
 }
 
 interface BillingReportProps {
@@ -100,11 +122,40 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
     payments = paymentData || [];
   }
 
+  // Fetch all invoices for this hotel
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("*")
+    .eq("hotel_id", hotel.id)
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .order("created_at", { ascending: false });
+
+  // Fetch invoice items for the invoices
+  const invoiceIds = invoices?.map(inv => inv.id) || [];
+  let invoiceItems: InvoiceItem[] = [];
+
+  if (invoiceIds.length > 0) {
+    const { data: itemsData } = await supabase
+      .from("invoice_items")
+      .select("*")
+      .in("invoice_id", invoiceIds)
+      .order("created_at", { ascending: false });
+
+    invoiceItems = itemsData || [];
+  }
+
   // Calculate statistics
   const totalRevenue = payments
     .filter(p => p.status === "completed")
     .reduce((sum, payment) => sum + payment.amount, 0);
-  
+
+  const totalInvoices = invoices?.length || 0;
+  const paidInvoices = invoices?.filter(inv => inv.status === 'paid').length || 0;
+  const totalInvoiceRevenue = invoices
+    ?.filter(inv => inv.status === 'paid')
+    .reduce((sum, inv) => sum + inv.total_amount, 0) || 0;
+
   const totalPayments = payments.length;
   const successfulPayments = payments.filter(p => p.status === "completed").length;
   const pendingPayments = payments.filter(p => p.status === "pending").length;
@@ -139,18 +190,15 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
 
   // Handle download as CSV functionality
   const handleDownloadCSV = () => {
-    // Create CSV content
-    const headers = ['Booking ID', 'Guest Name', 'Room', 'Amount', 'Method', 'Date', 'Status'];
-    const rows = payments.map(payment => {
-      const booking = bookings?.find(b => b.id === payment.booking_id);
+    // Create CSV content for invoices
+    const headers = ['Invoice Number', 'Date', 'Amount', 'Status', 'Guest'];
+    const rows = (invoices || []).map(invoice => {
       return [
-        booking?.id.substring(0, 8) || '',
-        `${booking?.guest?.first_name || ''} ${booking?.guest?.last_name || ''}`.trim(),
-        booking?.unit?.name || '',
-        payment.amount,
-        payment.method,
-        formatDate(payment.created_at),
-        payment.status
+        invoice.invoice_number,
+        formatDate(invoice.created_at),
+        invoice.total_amount,
+        invoice.status,
+        'N/A' // Guest information would need to be joined
       ];
     });
 
@@ -185,6 +233,9 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
     }
   };
 
+  // Dynamically import the BillingEntryForm component
+  const BillingEntryForm = (await import('@/components/dashboard/billing-entry-form')).BillingEntryForm;
+
   return (
     <div className="space-y-6">
       {/* Header with action buttons */}
@@ -193,7 +244,7 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
           <h1 className="text-3xl font-bold">Billing Reports</h1>
           <p className="text-muted-foreground">Detailed view of all billing transactions</p>
         </div>
-        <div className="flex gap-3">
+        <div className="flex flex-wrap gap-3">
           <Button variant="outline" size="sm" onClick={handlePrint} className="flex items-center gap-2">
             <Printer className="h-4 w-4" />
             Print
@@ -221,36 +272,36 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalRevenue.toLocaleString()} {hotel.currency}</div>
-            <p className="text-xs text-muted-foreground">From completed payments</p>
+            <div className="text-2xl font-bold">{totalInvoiceRevenue.toLocaleString()} {hotel.currency}</div>
+            <p className="text-xs text-muted-foreground">From paid invoices</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Total Payments</CardTitle>
-            <CreditCard className="h-4 w-4 text-primary" />
+            <CardTitle className="text-sm font-medium">Total Invoices</CardTitle>
+            <FileText className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{totalPayments}</div>
-            <p className="text-xs text-muted-foreground">All payment transactions</p>
+            <div className="text-2xl font-bold">{totalInvoices}</div>
+            <p className="text-xs text-muted-foreground">All invoices created</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Successful</CardTitle>
+            <CardTitle className="text-sm font-medium">Paid Invoices</CardTitle>
             <TrendingUp className="h-4 w-4 text-success" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{successfulPayments}</div>
-            <p className="text-xs text-muted-foreground">Completed payments</p>
+            <div className="text-2xl font-bold">{paidInvoices}</div>
+            <p className="text-xs text-muted-foreground">Paid invoices</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium">Pending</CardTitle>
+            <CardTitle className="text-sm font-medium">Pending Payments</CardTitle>
             <TrendingDown className="h-4 w-4 text-warning" />
           </CardHeader>
           <CardContent>
@@ -260,93 +311,67 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
         </Card>
       </div>
 
-      {/* Payment Methods Breakdown */}
+      {/* Billing Entry Form */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <CreditCard className="h-5 w-5" />
-            Payment Methods
+            <FileText className="h-5 w-5" />
+            Add New Billing Entry
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-            {Object.entries(paymentMethods).length === 0 ? (
-              <p className="py-8 text-center text-muted-foreground col-span-full">No payment data available</p>
-            ) : (
-              Object.entries(paymentMethods).map(([method, count]) => (
-                <div key={method} className="rounded-lg border border-border p-4 text-center">
-                  <p className="text-2xl font-bold">{count}</p>
-                  <p className="text-sm capitalize text-muted-foreground">{method.replace("_", " ")}</p>
-                </div>
-              ))
-            )}
-          </div>
+          <BillingEntryForm
+            hotelId={hotel.id}
+            currency={hotel.currency}
+            onEntryAdded={() => window.location.reload()}
+          />
         </CardContent>
       </Card>
 
-      {/* Payments Table */}
+      {/* Invoice Items Table */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Payment Transactions
+              <FileText className="h-5 w-5" />
+              Billing Entries
             </CardTitle>
-            <p className="text-sm text-muted-foreground">All payment transactions for the selected period</p>
+            <p className="text-sm text-muted-foreground">All billing entries for the selected period</p>
           </div>
         </CardHeader>
         <CardContent>
-          {payments.length === 0 ? (
+          {invoiceItems.length === 0 ? (
             <div className="py-12 text-center">
-              <CreditCard className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-2 text-lg font-semibold">No payment transactions</h3>
-              <p className="text-muted-foreground">No billing data found for the selected period.</p>
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-lg font-semibold">No billing entries</h3>
+              <p className="text-muted-foreground">No billing entries found for the selected period.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Booking ID</TableHead>
-                    <TableHead>Guest</TableHead>
-                    <TableHead>Room</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Method</TableHead>
+                    <TableHead>Invoice</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Unit Price</TableHead>
+                    <TableHead>Total</TableHead>
                     <TableHead>Date</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {payments.map((payment) => {
-                    const booking = bookings?.find(b => b.id === payment.booking_id);
+                  {invoiceItems.map((item) => {
+                    const invoice = invoices?.find(inv => inv.id === item.invoice_id);
                     return (
-                      <TableRow key={payment.id}>
+                      <TableRow key={item.id}>
                         <TableCell className="font-medium">
-                          {booking?.id ? booking.id.substring(0, 8) : '-'}
+                          {invoice?.invoice_number || 'N/A'}
                         </TableCell>
-                        <TableCell>
-                          {booking?.guest?.first_name && booking?.guest?.last_name
-                            ? `${booking.guest.first_name} ${booking.guest.last_name}`
-                            : '-'}
-                        </TableCell>
-                        <TableCell>{booking?.unit?.name || '-'}</TableCell>
-                        <TableCell>{payment.amount} {hotel.currency}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline" className="capitalize">
-                            {payment.method.replace("_", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatDate(payment.created_at)}</TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant={payment.status === 'completed' ? 'default' : 
-                                   payment.status === 'pending' ? 'secondary' : 'destructive'}
-                          >
-                            {payment.status.replace("_", " ")}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{payment.notes || '-'}</TableCell>
+                        <TableCell>{item.description}</TableCell>
+                        <TableCell>{item.quantity}</TableCell>
+                        <TableCell>{item.unit_price} {hotel.currency}</TableCell>
+                        <TableCell>{item.total_price} {hotel.currency}</TableCell>
+                        <TableCell>{formatDate(item.created_at)}</TableCell>
                       </TableRow>
                     );
                   })}
@@ -357,64 +382,50 @@ export default async function BillingReportsPage({ searchParams }: BillingReport
         </CardContent>
       </Card>
 
-      {/* Bookings Table */}
+      {/* Invoices Table */}
       <Card>
         <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Booking Billing Details
+              <FileText className="h-5 w-5" />
+              Invoice Details
             </CardTitle>
-            <p className="text-sm text-muted-foreground">Billing information for all bookings</p>
+            <p className="text-sm text-muted-foreground">All invoices for the selected period</p>
           </div>
         </CardHeader>
         <CardContent>
-          {bookings && bookings.length === 0 ? (
+          {invoices && invoices.length === 0 ? (
             <div className="py-12 text-center">
-              <Calendar className="mx-auto h-12 w-12 text-muted-foreground" />
-              <h3 className="mt-2 text-lg font-semibold">No bookings found</h3>
-              <p className="text-muted-foreground">No booking data found for the selected period.</p>
+              <FileText className="mx-auto h-12 w-12 text-muted-foreground" />
+              <h3 className="mt-2 text-lg font-semibold">No invoices found</h3>
+              <p className="text-muted-foreground">No invoices found for the selected period.</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Booking ID</TableHead>
-                    <TableHead>Guest</TableHead>
-                    <TableHead>Room</TableHead>
-                    <TableHead>Total Amount</TableHead>
-                    <TableHead>Check-in</TableHead>
-                    <TableHead>Check-out</TableHead>
+                    <TableHead>Invoice Number</TableHead>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Amount</TableHead>
                     <TableHead>Status</TableHead>
-                    <TableHead>Source</TableHead>
+                    <TableHead>Notes</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {bookings?.map((booking) => (
-                    <TableRow key={booking.id}>
+                  {invoices?.map((invoice) => (
+                    <TableRow key={invoice.id}>
                       <TableCell className="font-medium">
-                        {booking.id.substring(0, 8)}
+                        {invoice.invoice_number}
                       </TableCell>
-                      <TableCell>
-                        {booking.guest?.first_name && booking.guest?.last_name
-                          ? `${booking.guest.first_name} ${booking.guest.last_name}`
-                          : '-'}
-                      </TableCell>
-                      <TableCell>{booking.unit?.name || '-'}</TableCell>
-                      <TableCell>{booking.total_amount || 0} {hotel.currency}</TableCell>
-                      <TableCell>{formatDate(booking.check_in)}</TableCell>
-                      <TableCell>{formatDate(booking.check_out)}</TableCell>
+                      <TableCell>{formatDate(invoice.created_at)}</TableCell>
+                      <TableCell>{invoice.total_amount} {hotel.currency}</TableCell>
                       <TableCell>
                         <Badge variant="outline" className="capitalize">
-                          {booking.status.replace("_", " ")}
+                          {invoice.status.replace("_", " ")}
                         </Badge>
                       </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary" className="capitalize">
-                          {booking.source.replace("_", ".")}
-                        </Badge>
-                      </TableCell>
+                      <TableCell>{invoice.notes || '-'}</TableCell>
                     </TableRow>
                   ))}
                 </TableBody>

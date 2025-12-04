@@ -86,8 +86,8 @@ export function BookingForm({ hotelId, currency, units, guests, booking }: Booki
       }
     }
 
-    const bookingData = {
-      hotel_id: hotelId,
+    // Prepare booking data, excluding hotel_id for updates to prevent unauthorized changes
+    const baseBookingData = {
       unit_id: formData.unit_id || null,
       guest_id: guestId || null,
       check_in: formData.check_in,
@@ -101,14 +101,79 @@ export function BookingForm({ hotelId, currency, units, guests, booking }: Booki
       special_requests: formData.special_requests || null,
     }
 
-    if (booking) {
-      await supabase.from("bookings").update(bookingData).eq("id", booking.id)
-    } else {
-      await supabase.from("bookings").insert(bookingData)
-    }
+    try {
+      if (booking) {
+        // Update booking via API route - add hotel_id for validation but this will be ignored by the API
+        const bookingUpdateData = {
+          ...baseBookingData,
+          hotel_id: hotelId, // Include for form consistency but the API will validate based on existing booking
+        }
 
-    router.push("/dashboard/bookings")
-    router.refresh()
+        const response = await fetch(`/api/v1/bookings/${booking.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bookingUpdateData),
+        })
+
+        if (!response.ok) {
+          // Check if the response is JSON or HTML
+          const contentType = response.headers.get('content-type')
+          let errorMessage = 'Failed to update booking'
+
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } else {
+            // If not JSON, try to get text, or use a default error
+            const errorText = await response.text()
+            errorMessage = errorText || `HTTP Error: ${response.status}`
+          }
+
+          throw new Error(errorMessage)
+        }
+      } else {
+        // Create new booking via API route
+        const bookingCreateData = {
+          ...baseBookingData,
+          hotel_id: hotelId,
+        }
+
+        const response = await fetch('/api/v1/bookings', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(bookingCreateData),
+        })
+
+        if (!response.ok) {
+          // Check if the response is JSON or HTML
+          const contentType = response.headers.get('content-type')
+          let errorMessage = 'Failed to create booking'
+
+          if (contentType && contentType.includes('application/json')) {
+            const errorData = await response.json()
+            errorMessage = errorData.error || errorMessage
+          } else {
+            // If not JSON, try to get text, or use a default error
+            const errorText = await response.text()
+            errorMessage = errorText || `HTTP Error: ${response.status}`
+          }
+
+          throw new Error(errorMessage)
+        }
+      }
+
+      router.push("/dashboard/bookings")
+      router.refresh()
+    } catch (error) {
+      console.error("Booking operation error:", error)
+      alert(error instanceof Error ? error.message : "An error occurred while saving the booking")
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

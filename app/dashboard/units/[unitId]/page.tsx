@@ -24,7 +24,7 @@ export default async function ViewUnitPage({ params }: Props) {
   // Get the unit data
   const { data: unit, error: unitError } = await supabase
     .from("units")
-    .select("id, name, room_type_id, floor, status, smart_lock_id, notes, is_visible, created_at, updated_at")
+    .select("id, name, room_type_id, floor, status, smart_lock_id, notes, is_visible, base_price, service_charges, created_at, updated_at")
     .eq("id", params.unitId)
     .eq("hotel_id", hotel.id)
     .single() as { data: Unit | null, error: any }
@@ -40,7 +40,7 @@ export default async function ViewUnitPage({ params }: Props) {
         <h1 className="text-3xl font-bold">Unit Details</h1>
         <p className="text-muted-foreground">Information about {unit.name}</p>
       </div>
-      
+
       <div className="bg-white p-6 rounded-lg border">
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -54,6 +54,14 @@ export default async function ViewUnitPage({ params }: Props) {
           <div>
             <h3 className="font-medium text-gray-700">Floor</h3>
             <p>{unit.floor || 'N/A'}</p>
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-700">Base Price</h3>
+            <p>{unit.base_price ? `${unit.base_price} SAR` : 'N/A'}</p>
+          </div>
+          <div>
+            <h3 className="font-medium text-gray-700">Service Charges</h3>
+            <p>{unit.service_charges ? `${unit.service_charges} SAR` : 'N/A'}</p>
           </div>
           <div>
             <h3 className="font-medium text-gray-700">Visibility</h3>

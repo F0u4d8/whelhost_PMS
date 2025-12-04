@@ -62,6 +62,8 @@ CREATE TABLE IF NOT EXISTS public.units (
   smart_lock_id TEXT,
   notes TEXT,
   is_visible BOOLEAN DEFAULT TRUE,
+  base_price DECIMAL(10,2),
+  service_charges DECIMAL(10,2) DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
