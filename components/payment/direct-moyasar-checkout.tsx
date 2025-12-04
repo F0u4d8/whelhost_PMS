@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { 
+import {
   Card,
   CardContent,
   CardDescription,
@@ -11,15 +11,10 @@ import {
   CardHeader,
   CardTitle
 } from '@/components/ui/card';
-import { 
-  Download,
-  Printer,
-  Share2,
-  Calendar,
-  User,
+import {
   CreditCard,
-  Banknote,
-  ExternalLink
+  AlertTriangle,
+  Shield
 } from 'lucide-react';
 
 interface DirectMoyasarCheckoutProps {
@@ -32,17 +27,16 @@ interface DirectMoyasarCheckoutProps {
   onError?: (error: string) => void;
 }
 
-export function DirectMoyasarCheckout({ 
-  bookingId, 
-  amount, 
-  currency, 
-  guestName, 
-  description = 'Hotel Booking Payment',
+export function DirectMoyasarCheckout({
+  bookingId,
+  amount,
+  currency,
+  guestName,
+  description = 'Payment for booking #' + bookingId.substring(0, 8),
   onComplete,
   onError
 }: DirectMoyasarCheckoutProps) {
   const [loading, setLoading] = useState(false);
-  const [checkoutUrl, setCheckoutUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const createCheckoutSession = async () => {
@@ -62,7 +56,7 @@ export function DirectMoyasarCheckout({
           metadata: {
             booking_id: bookingId,
             guest_name: guestName,
-            user_id: '', // This would be the actual user ID in a real implementation
+            user_id: '',
           },
           callback_url: `${window.location.origin}/api/moyasar/webhook`,
           cancel_url: `${window.location.origin}/dashboard/bookings/${bookingId}`,
@@ -72,80 +66,109 @@ export function DirectMoyasarCheckout({
       const data = await response.json();
 
       if (!data.success) {
-        throw new Error(data.error || 'Failed to create checkout session');
-      }
-
-      setCheckoutUrl(data.checkout_url);
-      
-      // Redirect to Moyasar checkout
-      if (data.checkout_url) {
-        window.location.href = data.checkout_url;
+        if (data.error && data.error.includes('network restrictions') || data.error.includes('outbound connections')) {
+          setError('Payment processing is temporarily unavailable due to network restrictions. Please contact support to complete your payment.');
+          onError?.('Network restrictions are preventing direct payment processing.');
+        } else {
+          throw new Error(data.error || 'Failed to create checkout session');
+        }
       } else {
-        throw new Error('No checkout URL received from Moyasar');
+        if (data.checkout_url) {
+          window.location.href = data.checkout_url;
+        } else {
+          throw new Error('No checkout URL received from Moyasar');
+        }
       }
     } catch (err: any) {
       console.error('Error creating Moyasar checkout:', err);
-      setError(err.message);
-      onError?.(err.message);
+
+      if (err.message.includes('network restrictions') || err.message.includes('outbound connections')) {
+        setError('Payment processing is temporarily unavailable due to network restrictions. Please contact support to complete your payment.');
+        onError?.('Network restrictions are preventing direct payment processing.');
+      } else {
+        setError(err.message);
+        onError?.(err.message);
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="space-y-4">
-      <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-        <CardHeader className="pb-2">
-          <CardTitle className="flex items-center gap-2 text-xl">
-            <CreditCard className="h-5 w-5" />
-            Moyasar Payment
-          </CardTitle>
-          <CardDescription>
-            Secure payment processing via Moyasar
-          </CardDescription>
+    <div className="space-y-6 max-w-lg mx-auto p-6">
+      <div className="text-center space-y-2">
+        <h1 className="text-xl font-bold text-white">Payment Details</h1>
+        <p className="text-white/80 text-sm">Secure payment for your customer</p>
+      </div>
+
+      <Card className="border-0 shadow-lg bg-gradient-to-br from-amber-800 to-amber-900 text-white overflow-hidden">
+        <CardHeader className="pb-3 relative">
+          <div className="absolute inset-0 bg-gradient-to-r from-amber-700 to-amber-800 opacity-20"></div>
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <CardTitle className="text-white font-semibold">Payment Details</CardTitle>
+              <CardDescription className="text-amber-100/90 mt-1 text-sm">
+                Secure payment for your customer
+              </CardDescription>
+            </div>
+            <Badge className="bg-amber-700 text-white border-amber-600">
+              <Shield className="w-3 h-3 mr-1" />
+              Secure
+            </Badge>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground">Guest</p>
-              <p className="font-medium">{guestName}</p>
+
+        <CardContent className="p-5 relative z-10">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between py-2 border-b border-amber-700/50">
+              <span className="text-amber-200">Customer</span>
+              <span className="font-medium text-white">{guestName}</span>
             </div>
-            <div>
-              <p className="text-sm text-muted-foreground">Booking ID</p>
-              <p className="font-mono text-sm">{bookingId.substring(0, 8)}...</p>
+
+            <div className="flex items-center justify-between py-2 border-b border-amber-700/50">
+              <span className="text-amber-200">Booking ID</span>
+              <span className="font-mono text-white">{bookingId.substring(0, 8).toUpperCase()}</span>
+            </div>
+
+            <div className="pt-4 pb-2">
+              <div className="text-3xl font-bold text-center mb-1">{amount.toFixed(2)}</div>
+              <div className="text-center text-xl text-amber-200 font-semibold mb-2">{currency}</div>
+              <p className="text-center text-sm text-amber-200/90">{description}</p>
             </div>
           </div>
-          
-          <div className="p-4 bg-white rounded-lg border">
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">Amount</p>
-              <p className="text-2xl font-bold">{currency} {amount.toFixed(2)}</p>
-            </div>
-          </div>
-          
+
           {error && (
-            <div className="p-3 bg-destructive/10 border border-destructive/30 rounded-md">
-              <p className="text-sm text-destructive">{error}</p>
+            <div className="mt-4 p-3 bg-red-900/50 border border-red-700 rounded-lg flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-red-300 mt-0.5 flex-shrink-0" />
+              <div className="flex-1">
+                <p className="text-sm font-medium text-red-200 mb-1">Error</p>
+                <p className="text-sm text-red-100">{error}</p>
+              </div>
             </div>
           )}
         </CardContent>
-        <CardFooter>
-          <Button 
-            className="w-full" 
-            onClick={createCheckoutSession} 
+
+        <CardFooter className="bg-amber-900/80 p-5 relative z-10">
+          <Button
+            className="w-full h-12 bg-white text-amber-900 hover:bg-amber-50 font-semibold text-base shadow-lg"
+            onClick={createCheckoutSession}
             disabled={loading}
           >
             {loading ? (
-              <>
-                <span>Processing...</span>
-              </>
+              <span className="flex items-center gap-3">
+                <div className="w-4 h-4 border-2 border-amber-900 border-t-transparent rounded-full animate-spin" />
+                Processing...
+              </span>
             ) : (
-              <>
-                <ExternalLink className="h-4 w-4 mr-2" />
+              <span className="flex items-center justify-center gap-2">
+                <CreditCard className="w-5 h-5" />
                 Pay with Moyasar
-              </>
+              </span>
             )}
           </Button>
+          <p className="text-xs text-amber-200/80 text-center mt-3">
+            Powered by Moyasar • SSL Encrypted
+          </p>
         </CardFooter>
       </Card>
     </div>

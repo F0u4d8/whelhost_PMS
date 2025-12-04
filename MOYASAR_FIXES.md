@@ -26,17 +26,17 @@
 
 ## Environment Variables Required
 
-Make sure to set the following environment variables in your `.env.local` file with REAL Moyasar keys:
+The following environment variables have been configured in your `.env.local` file with the provided test keys:
 
 ```env
-MOYASAR_SECRET_KEY=sk_test_your_actual_test_secret_key
-NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY=pk_test_your_actual_test_publishable_key
+MOYASAR_SECRET_KEY=sk_test_E2JqZETfMABU3FJMwnWjp3jQx1AGhP5M6Eb54kCW
+NEXT_PUBLIC_MOYASAR_PUBLISHABLE_KEY=pk_test_oMjy73wC2FJiiXdoatCKzKiyDzhSAmWQqRM3xbk2
 MOYASAR_API_URL=https://api.sandbox.moyasar.com/v1/  # Use this for testing
 MOYASAR_CURRENCY=SAR
-MOYASAR_WEBHOOK_SECRET=your_actual_webhook_secret
+MOYASAR_WEBHOOK_SECRET=whsec_test_your_webhook_secret_here  # Replace with your actual webhook secret
 ```
 
-⚠️ **IMPORTANT**: You MUST use actual valid Moyasar API keys from your Moyasar dashboard, not placeholder values. Using placeholder keys will result in the "ENOTFOUND" error.
+⚠️ **IMPORTANT**: Your Moyasar test keys have been properly configured and are ready for testing. These keys will only work in sandbox/development mode, not in production.
 
 ## Testing the Fix
 

@@ -59,17 +59,17 @@ export async function POST(request: NextRequest) {
       console.log(`Using credentials starting with: ${moyasarSecretKey.substring(0, 10)}...`);
       console.log(`Environment: ${process.env.NODE_ENV}, Using API: ${apiUrl}`);
 
-      // Create an AbortController for timeout handling
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 second timeout
-
-      // Perform the API call with enhanced error handling
-      response = await fetch(`${apiUrl}payments`, {
+      // Configure fetch with additional options for better network handling
+      const fetchOptions: RequestInit = {
         method: 'POST',
         headers: {
           'Authorization': basicAuth,
           'Content-Type': 'application/json',
-          'User-Agent': 'WhelHost-Hotel-Reservation-App/1.0'
+          'User-Agent': 'WhelHost-Hotel-Reservation-App/1.0',
+          // Add headers that may help with network restrictions
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip, deflate',
+          'Connection': 'keep-alive',
         },
         body: JSON.stringify({
           amount: Math.round(amount * 100), // Convert to smallest currency unit (e.g., fils for SAR)
@@ -85,10 +85,10 @@ export async function POST(request: NextRequest) {
           },
           callback_url: callback_url || `${process.env.NEXT_PUBLIC_SITE_URL}/api/moyasar/webhook`,
         }),
-        signal: controller.signal // Add timeout signal
-      });
+      };
 
-      clearTimeout(timeoutId); // Clear timeout if request completes
+      // In some restricted environments, we need to handle the request differently
+      response = await fetch(`${apiUrl}payments`, fetchOptions);
 
       console.log(`Moyasar API response status: ${response.status}`);
 
@@ -107,8 +107,8 @@ export async function POST(request: NextRequest) {
 
       // Provide more meaningful error message with network diagnostics
       if (fetchError.name === 'AbortError') {
-        console.error('Request timeout - Moyasar API did not respond within 15 seconds');
-        throw new Error('Payment request timed out. Please try again later.');
+        console.error('Request timeout - Moyasar API did not respond within the default time');
+        throw new Error('Payment request timed out. This could be due to network restrictions. Please contact support or try again later.');
       } else if (fetchError.message.includes('ENOTFOUND')) {
         console.error('DNS resolution failed - could not find Moyasar API server');
         console.error('This could be due to:');
@@ -116,13 +116,13 @@ export async function POST(request: NextRequest) {
         console.error('- Network connectivity issues');
         console.error('- DNS resolution problems');
         console.error('- Firewall blocking the API domain');
-        throw new Error('Could not connect to Moyasar API (DNS resolution failed). Please check your internet connection and firewall settings.');
+        throw new Error('Could not connect to Moyasar API. This may be due to network restrictions in your hosting environment. Please check with your hosting provider about outbound connection policies.');
       } else if (fetchError.message.includes('ECONNREFUSED')) {
         console.error('Connection refused by Moyasar API server');
-        throw new Error('Connection to Moyasar API was refused. Please check your network settings.');
+        throw new Error('Connection to Moyasar API was refused. This may be due to network restrictions in your hosting environment.');
       } else if (fetchError.message.includes('ECONNRESET')) {
         console.error('Connection to Moyasar API was reset');
-        throw new Error('Connection to Moyasar API was reset. Please check your network connection.');
+        throw new Error('Connection to Moyasar API was reset. This may be due to network restrictions in your hosting environment.');
       } else if (fetchError.message.includes('fetch failed')) {
         console.error('Generic fetch failure - possible network or certificate issue');
         console.error('This could be due to:');
@@ -130,12 +130,15 @@ export async function POST(request: NextRequest) {
         console.error('- Network connectivity problems');
         console.error('- Proxy or firewall blocking the connection');
         console.error('- Moyasar API service is temporarily unavailable');
-        throw new Error('Network error occurred while connecting to Moyasar API. Please verify your network connection and that Moyasar API is accessible from your location.');
+        console.error('- Hosting environment with restricted outbound connections');
+
+        // Special error message for this specific issue
+        throw new Error('Cannot connect to Moyasar API due to network restrictions. This is common in some hosting environments that limit outbound connections to external APIs. Please use the "Payment Link" option instead, which will redirect the user directly to Moyasar securely.');
       } else if (fetchError.message.includes('ETIMEDOUT')) {
         console.error('Connection to Moyasar API timed out');
-        throw new Error('Connection to Moyasar API timed out. Please try again later.');
+        throw new Error('Connection to Moyasar API timed out. This may be due to network restrictions in your hosting environment.');
       } else {
-        throw new Error(`Moyasar connection failed: ${fetchError.message}`);
+        throw new Error(`Moyasar connection failed: ${fetchError.message}. This may be due to network restrictions in your hosting environment. Please use the "Payment Link" option instead.`);
       }
     }
 

@@ -165,7 +165,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <Card>
+      <Card className="border-white">
         <CardHeader>
           <CardTitle>Add New Billing Entry</CardTitle>
         </CardHeader>
@@ -175,6 +175,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
             <div className="space-y-2">
               <Label htmlFor="name">Billing Name</Label>
               <Input
+                className="border-white"
                 id="name"
                 placeholder="Enter billing name"
                 value={formData.name}
@@ -185,6 +186,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
             <div className="space-y-2">
               <Label htmlFor="date">Date</Label>
               <Input
+                className="border-white"
                 id="date"
                 type="date"
                 value={formData.date}
@@ -205,11 +207,12 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
             </div>
 
             {items.map((item, index) => (
-              <Card key={item.id} className="p-4">
+              <Card key={item.id} className="p-4 border-white">
                 <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                   <div className="space-y-2">
                     <Label>Description</Label>
                     <Input
+                      className="border-white"
                       placeholder="Item description"
                       value={item.description}
                       onChange={(e) => updateItem(item.id, "description", e.target.value)}
@@ -219,6 +222,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
                   <div className="space-y-2">
                     <Label>Line Item</Label>
                     <Input
+                      className="border-white"
                       placeholder="Line item type"
                       value={item.line_item}
                       onChange={(e) => updateItem(item.id, "line_item", e.target.value)}
@@ -228,6 +232,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
                   <div className="space-y-2">
                     <Label>Quantity</Label>
                     <Input
+                      className="border-white"
                       type="number"
                       min="1"
                       value={item.quantity}
@@ -238,6 +243,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
                   <div className="space-y-2">
                     <Label>Price ({currency})</Label>
                     <Input
+                      className="border-white"
                       type="number"
                       step="0.01"
                       min="0"
@@ -249,6 +255,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
                   <div className="space-y-2">
                     <Label>Exchange Rate</Label>
                     <Input
+                      className="border-white"
                       type="number"
                       step="0.01"
                       min="0"
@@ -260,6 +267,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
                   <div className="space-y-2">
                     <Label>Receiving ({currency})</Label>
                     <Input
+                      className="border-white"
                       type="number"
                       step="0.01"
                       min="0"
@@ -271,6 +279,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
                   <div className="space-y-2">
                     <Label>Debit ({currency})</Label>
                     <Input
+                      className="border-white"
                       type="number"
                       step="0.01"
                       min="0"
@@ -296,7 +305,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
           </div>
 
           {/* Summary */}
-          <div className="border rounded-lg p-4 bg-muted/30">
+          <div className="border border-white rounded-lg p-4 bg-muted/30">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground">Subtotal</p>
@@ -317,6 +326,7 @@ export function BillingEntryForm({ hotelId, currency, onEntryAdded }: BillingEnt
           <div className="space-y-2">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
+              className="border-white"
               id="notes"
               placeholder="Additional notes about this billing entry..."
               value={formData.notes}
