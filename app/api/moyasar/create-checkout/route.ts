@@ -2,13 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
+    const body = await request.json();
+    console.log("RECEIVED PAYLOAD FROM FRONTEND FOR CHECKOUT:", JSON.stringify(body, null, 2));
+
     const {
       amount,
       currency = 'SAR',
       description = 'Hotel Booking Payment',
       metadata = {},
-      callback_url
-    } = await request.json();
+      callback_url,
+      cancel_url // Added cancel_url as per your requirements
+    } = body;
 
     // Validate required fields
     if (!amount) {
@@ -76,14 +80,15 @@ export async function POST(request: NextRequest) {
           currency,
           description,
           source: {
-            type: "card", // Changed from "url" to "card" to match allowed source types
+            type: "creditcard" // Using creditcard source type for redirect checkout
           },
+          callback_url: callback_url || `${process.env.NEXT_PUBLIC_SITE_URL}/api/moyasar/webhook`,
+          cancel_url: cancel_url || `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
           metadata: {
             ...metadata,
             created_at: new Date().toISOString(),
             environment: process.env.NODE_ENV,
-          },
-          callback_url: callback_url || `${process.env.NEXT_PUBLIC_SITE_URL}/api/moyasar/webhook`,
+          }
         }),
       };
 
