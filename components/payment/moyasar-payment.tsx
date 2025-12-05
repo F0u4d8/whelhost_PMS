@@ -6,13 +6,13 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { CreditCard, AlertCircle, CheckCircle2, Star, Award, Sparkles } from "lucide-react";
@@ -44,11 +44,11 @@ export function MoyasarPayment({ amount, currency = "SAR", onSuccess, onError, b
   // Format expiry date
   const handleExpiryChange = (field: 'month' | 'year', value: string) => {
     const digitsOnly = value.replace(/\D/g, "");
-    
+
     if (field === 'month') {
       const month = digitsOnly.substring(0, 2);
       setExpiryMonth(month);
-      
+
       // If we have 2 digits for month, clear year to allow typing
       if (month.length === 2 && expiryYear === "") {
         // User can continue typing for the year
@@ -83,9 +83,9 @@ export function MoyasarPayment({ amount, currency = "SAR", onSuccess, onError, b
     const currentYear = new Date().getFullYear() % 100;
     const currentMonth = new Date().getMonth() + 1;
 
-    if (isNaN(expMonth) || isNaN(expYear) || 
+    if (isNaN(expMonth) || isNaN(expYear) ||
         expMonth < 1 || expMonth > 12 ||
-        expYear < currentYear || 
+        expYear < currentYear ||
         (expYear === currentYear && expMonth < currentMonth)) {
       setError("Please enter a valid expiry date");
       setLoading(false);
@@ -108,7 +108,7 @@ export function MoyasarPayment({ amount, currency = "SAR", onSuccess, onError, b
           amount: amount,
           currency: currency,
           source: {
-            type: "creditcard",
+            type: "card", // Changed from "creditcard" to "card" to match Moyasar's expected type
             number: cardNumber.replace(/\s/g, ""),
             cvc: cvc,
             month: parseInt(expiryMonth),
