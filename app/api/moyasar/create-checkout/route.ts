@@ -12,13 +12,32 @@ export async function POST(request: NextRequest) {
       metadata = {},
       callback_url,
       cancel_url, // Added cancel_url as per your requirements
-      source = { type: "creditcard" } // Use the source object from the request, defaulting to creditcard
     } = body;
+
+    // Extract source but handle it separately for validation
+    let { source = { type: "creditcard" } } = body;
 
     // Validate required fields
     if (!amount) {
       return NextResponse.json(
         { error: 'Amount is required' },
+        { status: 400 }
+      );
+    }
+
+    // Validate source object structure
+    if (!source || typeof source !== 'object' || !source.type) {
+      return NextResponse.json(
+        { error: 'Source object with type is required. Expected format: { "source": { "type": "creditcard" } }' },
+        { status: 400 }
+      );
+    }
+
+    // Validate that source type is one of the allowed values
+    const allowedSourceTypes = ['creditcard', 'card', 'applepay', 'googlepay', 'samsungpay', 'stcpay', 'stcdcb', 'token', 'urpay'];
+    if (!allowedSourceTypes.includes(source.type)) {
+      return NextResponse.json(
+        { error: `Invalid source type: ${source.type}. Allowed types are: ${allowedSourceTypes.join(', ')}` },
         { status: 400 }
       );
     }
@@ -80,7 +99,7 @@ export async function POST(request: NextRequest) {
           amount: Math.round(amount * 100), // Convert to smallest currency unit (e.g., fils for SAR)
           currency,
           description,
-          source, // Use the source object directly from the request
+          source, // Use the validated source object from the request
           callback_url: callback_url || `${process.env.NEXT_PUBLIC_SITE_URL}/api/moyasar/webhook`,
           cancel_url: cancel_url || `${process.env.NEXT_PUBLIC_SITE_URL}/dashboard`,
           metadata: {
