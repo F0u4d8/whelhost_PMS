@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Search, Plus, CalendarDays, CreditCard, Clock, CheckCircle, Eye, Trash2 } from "lucide-react"
+import { Search, Plus, CalendarDays, CreditCard, Clock, CheckCircle, Eye, Trash2, Printer } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Reservation } from "@/lib/reservations-server-actions"
 import { addReservation as addReservationAction, deleteReservation as deleteReservationAction } from "@/lib/reservations-server-actions"
@@ -66,6 +66,125 @@ export default function ReservationsClient({ initialData }: ReservationsClientPr
     } catch (error) {
       console.error("Error adding reservation:", error);
       toast.error("حدث خطأ أثناء إضافة الحجز");
+    }
+  }
+
+  const handlePrint = (reservation: Reservation) => {
+    // Create a new window with the reservation details
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title> تقرير الحجز - ${reservation.id} </title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              margin: 20px;
+              background: #ffffff;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 20px;
+              margin-bottom: 20px;
+            }
+            .info-grid {
+              display: grid;
+              grid-template-columns: repeat(2, 1fr);
+              gap: 15px;
+              margin-bottom: 20px;
+            }
+            .info-item {
+              margin-bottom: 10px;
+            }
+            .label {
+              font-weight: bold;
+              color: #374151;
+            }
+            .value {
+              margin-top: 4px;
+              color: #1f2937;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 20px;
+            }
+            th, td {
+              border: 1px solid #d1d5db;
+              padding: 10px;
+              text-align: right;
+            }
+            th {
+              background-color: #f9fafb;
+              font-weight: 600;
+            }
+            @media print {
+              body { margin: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1> تقرير الحجز </h1>
+            <p> رقم الحجز: ${reservation.id} </p>
+          </div>
+
+          <div class="info-grid">
+            <div class="info-item">
+              <div class="label">اسم الضيف</div>
+              <div class="value">${reservation.guest}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">تاريخ الحجز</div>
+              <div class="value">${reservation.date}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">تاريخ الوصول</div>
+              <div class="value">${reservation.checkIn}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">تاريخ المغادرة</div>
+              <div class="value">${reservation.checkOut}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">عدد الليالي</div>
+              <div class="value">${reservation.nights}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">الوحدة</div>
+              <div class="value">${reservation.unit}</div>
+            </div>
+            <div class="info-item">
+              <div class="label">الإجمالي</div>
+              <div class="value">${reservation.total} ر.س</div>
+            </div>
+            <div class="info-item">
+              <div class="label">المتبقي</div>
+              <div class="value">${reservation.balance} ر.س</div>
+            </div>
+          </div>
+
+          <div class="info-item">
+            <div class="label">الحالة</div>
+            <div class="value">${statusConfig[reservation.status as keyof typeof statusConfig]?.label || reservation.status}</div>
+          </div>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
     }
   }
 
@@ -148,6 +267,14 @@ export default function ReservationsClient({ initialData }: ReservationsClientPr
                       <div className="flex items-center gap-1">
                         <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg hover:text-primary"
+                          onClick={() => handlePrint(res)}
+                        >
+                          <Printer className="h-4 w-4" />
                         </Button>
                         <Button
                           variant="ghost"
