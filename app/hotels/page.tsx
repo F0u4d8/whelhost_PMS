@@ -210,7 +210,7 @@ export default async function HotelsPage() {
                         {sampleRooms[hotel.id].name}
                       </p>
                     </div>
-                    <Button size="sm" variant="outline" className="rounded-lg border-amber-800/30">
+                    <Button size="sm" variant="outline" className="rounded-lg border-amber-800/30" asChild>
                       <Link href={`/rooms/${sampleRooms[hotel.id].unitId}`}>
                         View Details
                       </Link>

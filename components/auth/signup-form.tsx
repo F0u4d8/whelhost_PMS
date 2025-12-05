@@ -103,12 +103,12 @@ export function SignupForm() {
 
     // If signup is successful, redirect to home page immediately
     if (data.session) {
+      // User created and signed in successfully, redirect to home
       router.push("/")
       router.refresh()
     } else {
-      // If no session but user exists (requires email confirmation),
-      // we'll handle this differently since we removed email verification
-      // We'll redirect to login instead
+      // If no session but user exists (requires email confirmation or verification pending)
+      // Redirect to login instead of showing error
       setError("Account created! Please sign in with your credentials.")
       setLoading(false)
       setTimeout(() => {

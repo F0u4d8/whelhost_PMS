@@ -26,7 +26,6 @@ import {
   Clock
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
-import { DirectMoyasarCheckout } from '@/components/payment/direct-moyasar-checkout'
 
 interface RecordPaymentFormProps {
   bookingId: string
@@ -303,7 +302,7 @@ Thank you for your payment.
                 )}
                 {paymentStatus === 'pending' && (
                   <p>
-                    {paymentMethod === 'bank' ? 'Bank transfer pending confirmation' : 
+                    {paymentMethod === 'bank' ? 'Bank transfer pending confirmation' :
                      paymentMethod === 'link' ? 'Customer redirected to payment page' :
                      'Payment link sent to customer'}
                   </p>
@@ -402,7 +401,7 @@ Thank you for your payment.
       </div>
 
       <Tabs value={paymentMethod} onValueChange={(v: any) => setPaymentMethod(v)} className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-4">
+        <TabsList className="grid w-full grid-cols-2 gap-2 mb-4">
           <TabsTrigger value="bank">
             <Banknote className="h-4 w-4 mr-2" />
             Bank
@@ -410,10 +409,6 @@ Thank you for your payment.
           <TabsTrigger value="card">
             <CreditCard className="h-4 w-4 mr-2" />
             Card
-          </TabsTrigger>
-          <TabsTrigger value="link">
-            <LinkIcon className="h-4 w-4 mr-2" />
-            Link
           </TabsTrigger>
         </TabsList>
 
@@ -507,31 +502,6 @@ Thank you for your payment.
               <Button type="button" onClick={handleManualPaymentSubmit} className="w-full" disabled={loading}>
                 {loading ? 'Recording Payment...' : 'Record Card Payment'}
               </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="link" className="space-y-3">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Payment Link</CardTitle>
-              <CardDescription>
-                Create a secure payment link using Moyasar
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <DirectMoyasarCheckout
-                bookingId={bookingId}
-                amount={bookingAmount}
-                currency={currency}
-                guestName={guestName}
-                description={`Payment for booking #${bookingId.substring(0, 8)}`}
-                onComplete={handleMoyasarComplete}
-                onError={(error) => {
-                  console.error('Moyasar checkout error:', error)
-                  alert(`Payment checkout failed: ${error}`)
-                }}
-              />
             </CardContent>
           </Card>
         </TabsContent>

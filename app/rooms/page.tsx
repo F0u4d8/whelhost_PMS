@@ -80,17 +80,10 @@ export default async function AllRoomsPage() {
   const serviceRoleClient = createServiceRoleClient();
 
   // Show all available rooms to all users (both with and without hotels)
+  // Using simplified select to avoid foreign key relationship issues
   const { data: units, error } = await serviceRoleClient
     .from("units")
-    .select(`
-      id,
-      name,
-      notes,
-      room_type_id,
-      status,
-      hotel_id,
-      is_visible
-    `)
+    .select("id, name, notes, room_type_id, status, hotel_id, is_visible")
     .eq("is_visible", true)
     .not("status", "eq", "maintenance");
 

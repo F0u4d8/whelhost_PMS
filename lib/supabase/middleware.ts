@@ -11,6 +11,13 @@ export async function updateSession(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
+        get(name: string) {
+          try {
+            return request.cookies.get(name)?.value
+          } catch {
+            return undefined
+          }
+        },
         getAll() {
           return request.cookies.getAll()
         },
@@ -50,15 +57,18 @@ export async function updateSession(request: NextRequest) {
       .eq("id", user.id)
       .single()
 
+    // If accessing the upgrade page, allow access regardless of premium status
+    if (request.nextUrl.pathname.startsWith("/dashboard/upgrade")) {
+      return supabaseResponse;
+    }
+
     const isPremiumExpired = profile?.premium_expires_at ? new Date(profile.premium_expires_at) < new Date() : true
 
     if (!profile?.is_premium || isPremiumExpired) {
-      // Allow access to upgrade page
-      if (!request.nextUrl.pathname.startsWith("/dashboard/upgrade")) {
-        const url = request.nextUrl.clone()
-        url.pathname = "/dashboard/upgrade"
-        return NextResponse.redirect(url)
-      }
+      // Redirect non-premium users to upgrade page (except when already on upgrade page)
+      const url = request.nextUrl.clone()
+      url.pathname = "/dashboard/upgrade"
+      return NextResponse.redirect(url)
     }
   }
 

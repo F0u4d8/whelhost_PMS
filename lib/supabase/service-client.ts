@@ -29,10 +29,28 @@ export async function getPublicHotels() {
   try {
     const supabase = createServiceRoleClient();
 
-    const { data: hotels, error } = await supabase
+    // Try to fetch hotels with the location column first
+    let { data: hotels, error } = await supabase
       .from("hotels")
       .select("id, name, description, location, owner_id")
       .order("name");
+
+    // If there's a column error (location doesn't exist), try without the location column
+    if (error && (error.code === '42703' || error.message.includes('column hotels.location does not exist'))) {
+      const { data: hotelsWithoutLocation, error: newError } = await supabase
+        .from("hotels")
+        .select("id, name, description, owner_id")
+        .order("name");
+
+      if (newError) {
+        console.error("Error fetching public hotels without location:", newError);
+        return { hotels: [], error: newError.message || newError || "Unknown error" };
+      }
+
+      // Add location as undefined to maintain structure
+      hotels = hotelsWithoutLocation?.map(hotel => ({ ...hotel, location: undefined }));
+      error = null;
+    }
 
     if (error) {
       console.error("Error fetching public hotels:", error);
