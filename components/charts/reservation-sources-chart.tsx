@@ -2,15 +2,16 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-const data = [
-  { source: "Booking", reservations: 45 },
-  { source: "Expedia", reservations: 32 },
-  { source: "مباشر", reservations: 28 },
-  { source: "Agoda", reservations: 18 },
-  { source: "أخرى", reservations: 12 },
-]
+interface ReservationSourceData {
+  source: string;
+  reservations: number;
+}
 
-export function ReservationSourcesChart() {
+interface ReservationSourcesChartProps {
+  data: ReservationSourceData[];
+}
+
+export function ReservationSourcesChartClient({ data }: ReservationSourcesChartProps) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data} layout="vertical" margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>

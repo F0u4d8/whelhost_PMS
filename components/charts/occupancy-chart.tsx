@@ -2,17 +2,16 @@
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-const data = [
-  { day: "السبت", occupancy: 85 },
-  { day: "الأحد", occupancy: 72 },
-  { day: "الإثنين", occupancy: 68 },
-  { day: "الثلاثاء", occupancy: 91 },
-  { day: "الأربعاء", occupancy: 78 },
-  { day: "الخميس", occupancy: 95 },
-  { day: "الجمعة", occupancy: 88 },
-]
+interface OccupancyData {
+  day: string;
+  occupancy: number;
+}
 
-export function OccupancyChart() {
+interface OccupancyChartProps {
+  data: OccupancyData[];
+}
+
+export function OccupancyChart({ data }: OccupancyChartProps) {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>

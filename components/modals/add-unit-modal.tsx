@@ -1,58 +1,90 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePMSStore } from "@/lib/store"
 import { toast } from "sonner"
 
 interface AddUnitModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAddUnit?: (formData: any) => Promise<void>
+  onUpdateUnit?: (id: string, formData: any) => Promise<void>
+  editingUnit?: any // Pass the unit being edited
 }
 
-export function AddUnitModal({ open, onOpenChange }: AddUnitModalProps) {
-  const addUnit = usePMSStore((state) => state.addUnit)
+export function AddUnitModal({
+  open,
+  onOpenChange,
+  onAddUnit,
+  onUpdateUnit,
+  editingUnit
+}: AddUnitModalProps) {
   const [formData, setFormData] = useState({
-    number: "",
-    name: "",
-    type: "room",
-    floor: "1",
-    pricePerNight: "",
-    status: "vacant" as const,
+    number: editingUnit?.number || "",
+    name: editingUnit?.name || "",
+    type: editingUnit?.type || "room",
+    floor: editingUnit?.floor || "1",
+    pricePerNight: editingUnit?.pricePerNight?.toString() || "",
+    status: editingUnit?.status || "vacant",
   })
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const isEditing = !!editingUnit;
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.number || !formData.name) {
       toast.error("الرجاء تعبئة جميع الحقول المطلوبة")
       return
     }
 
-    addUnit({
-      number: formData.number,
-      name: formData.name,
-      type: formData.type,
-      floor: formData.floor,
-      pricePerNight: Number(formData.pricePerNight),
-      status: formData.status,
-    })
+    try {
+      if (isEditing && editingUnit && onUpdateUnit) {
+        await onUpdateUnit(editingUnit.id, {
+          number: formData.number,
+          name: formData.name,
+          type: formData.type as any,
+          floor: formData.floor,
+          pricePerNight: Number(formData.pricePerNight),
+          status: formData.status as any,
+        });
+        toast.success("تم تحديث الوحدة بنجاح");
+      } else if (onAddUnit) {
+        await onAddUnit({
+          number: formData.number,
+          name: formData.name,
+          type: formData.type as any,
+          floor: formData.floor,
+          pricePerNight: Number(formData.pricePerNight),
+          status: formData.status as any,
+        });
+        toast.success("تم إضافة الوحدة بنجاح");
+      }
 
-    toast.success("تم إضافة الوحدة بنجاح")
-    onOpenChange(false)
-    setFormData({ number: "", name: "", type: "room", floor: "1", pricePerNight: "", status: "vacant" })
+      onOpenChange(false);
+      setFormData({
+        number: "",
+        name: "",
+        type: "room",
+        floor: "1",
+        pricePerNight: "",
+        status: "vacant"
+      });
+    } catch (error) {
+      console.error("Error saving unit:", error);
+      toast.error(isEditing ? "حدث خطأ أثناء تحديث الوحدة" : "حدث خطأ أثناء إضافة الوحدة");
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px] bg-card border-border" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-foreground">إضافة وحدة جديدة</DialogTitle>
+          <DialogTitle className="text-foreground">{isEditing ? "تعديل وحدة" : "إضافة وحدة جديدة"}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
@@ -124,7 +156,7 @@ export function AddUnitModal({ open, onOpenChange }: AddUnitModalProps) {
               إلغاء
             </Button>
             <Button type="submit" className="rounded-xl">
-              إضافة الوحدة
+              {isEditing ? "تحديث" : "إضافة"}
             </Button>
           </DialogFooter>
         </form>

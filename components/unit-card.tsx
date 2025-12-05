@@ -17,6 +17,8 @@ import { toast } from "sonner"
 
 interface UnitCardProps {
   unit: Unit
+  onEdit?: (unit: Unit) => void
+  onDelete?: (id: string) => void
 }
 
 const statusConfig = {
@@ -47,14 +49,14 @@ const statusConfig = {
   },
 }
 
-export function UnitCard({ unit }: UnitCardProps) {
-  const config = statusConfig[unit.status]
+export function UnitCard({ unit, onEdit, onDelete }: UnitCardProps) {
+  const config = statusConfig[unit.status] || statusConfig.vacant // fallback to vacant config if status is invalid
   const [statusModalOpen, setStatusModalOpen] = useState(false)
-  const deleteUnit = usePMSStore((state) => state.deleteUnit)
 
   const handleDelete = () => {
-    deleteUnit(unit.id)
-    toast.success(`تم حذف الوحدة ${unit.number}`)
+    if (onDelete) {
+      onDelete(unit.id);
+    }
   }
 
   return (
@@ -75,9 +77,9 @@ export function UnitCard({ unit }: UnitCardProps) {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setStatusModalOpen(true)}>
+                <DropdownMenuItem onClick={() => onEdit && onEdit(unit)}>
                   <Edit className="h-4 w-4 ml-2" />
-                  تغيير الحالة
+                  تعديل
                 </DropdownMenuItem>
                 <DropdownMenuItem>عرض التفاصيل</DropdownMenuItem>
                 <DropdownMenuSeparator />

@@ -2,22 +2,32 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePMSStore } from "@/lib/store"
 import { toast } from "sonner"
+import { Guest } from "@/lib/guests-server-actions"
 
 interface AddGuestModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAddGuest?: (guestData: Omit<Guest, 'id' | 'reservations' | 'createdAt'>) => Promise<void>
+  onUpdateGuest?: (id: string, guestData: Omit<Guest, 'id' | 'reservations' | 'createdAt'>) => Promise<void>
+  editingGuest?: Guest | null
 }
 
-export function AddGuestModal({ open, onOpenChange }: AddGuestModalProps) {
-  const addGuest = usePMSStore((state) => state.addGuest)
+export function AddGuestModal({
+  open,
+  onOpenChange,
+  onAddGuest,
+  onUpdateGuest,
+  editingGuest
+}: AddGuestModalProps) {
+  const isEditing = !!editingGuest;
+
   const [formData, setFormData] = useState({
     name: "",
     nationality: "سعودي",
@@ -25,30 +35,63 @@ export function AddGuestModal({ open, onOpenChange }: AddGuestModalProps) {
     idNumber: "",
     phone: "",
     email: "",
-  })
+  });
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+  // Update form data when editing guest changes
+  useEffect(() => {
+    if (editingGuest) {
+      setFormData({
+        name: editingGuest.name,
+        nationality: editingGuest.nationality,
+        idType: editingGuest.idType,
+        idNumber: editingGuest.idNumber,
+        phone: editingGuest.phone,
+        email: editingGuest.email,
+      });
+    } else {
+      // Reset form when not editing
+      setFormData({
+        name: "",
+        nationality: "سعودي",
+        idType: "هوية وطنية",
+        idNumber: "",
+        phone: "",
+        email: "",
+      });
+    }
+  }, [editingGuest]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formData.name || !formData.idNumber || !formData.phone) {
-      toast.error("الرجاء تعبئة جميع الحقول المطلوبة")
-      return
+      toast.error("الرجاء تعبئة جميع الحقول المطلوبة");
+      return;
     }
 
-    addGuest({
-      ...formData,
-      reservations: 0,
-    })
+    try {
+      if (isEditing && editingGuest && onUpdateGuest) {
+        await onUpdateGuest(editingGuest.id, formData);
+        toast.success("تم تحديث بيانات الضيف بنجاح");
+      } else if (onAddGuest) {
+        await onAddGuest(formData);
+        toast.success("تم إضافة الضيف بنجاح");
+      }
 
-    toast.success("تم إضافة الضيف بنجاح")
-    onOpenChange(false)
-    setFormData({ name: "", nationality: "سعودي", idType: "هوية وطنية", idNumber: "", phone: "", email: "" })
-  }
+      onOpenChange(false);
+      setFormData({ name: "", nationality: "سعودي", idType: "هوية وطنية", idNumber: "", phone: "", email: "" });
+    } catch (error) {
+      console.error("Error with guest operation:", error);
+      toast.error(isEditing ? "حدث خطأ أثناء تحديث بيانات الضيف" : "حدث خطأ أثناء إضافة الضيف");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[500px] bg-card border-border" dir="rtl">
         <DialogHeader>
-          <DialogTitle className="text-foreground">إضافة ضيف جديد</DialogTitle>
+          <DialogTitle className="text-foreground">
+            {isEditing ? "تحديث بيانات الضيف" : "إضافة ضيف جديد"}
+          </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
@@ -137,7 +180,7 @@ export function AddGuestModal({ open, onOpenChange }: AddGuestModalProps) {
               إلغاء
             </Button>
             <Button type="submit" className="rounded-xl">
-              إضافة الضيف
+              {isEditing ? "تحديث" : "إضافة الضيف"}
             </Button>
           </DialogFooter>
         </form>

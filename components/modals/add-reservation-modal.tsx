@@ -1,23 +1,71 @@
 "use client"
 
 import type React from "react"
-
 import { useState, useMemo } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePMSStore } from "@/lib/store"
 import { toast } from "sonner"
+
+interface Unit {
+  id: string;
+  number: string;
+  name: string;
+  status: "occupied" | "vacant" | "out-of-service" | "departure-today" | "arrival-today";
+  pricePerNight?: number;
+  type?: string;
+  floor?: string;
+  guest?: string;
+  checkIn?: string;
+  checkOut?: string;
+  balance?: number;
+  propertyId?: string;
+}
+
+interface Guest {
+  id: string;
+  name: string;
+  nationality: string;
+  idType: string;
+  idNumber: string;
+  phone: string;
+  email: string;
+  reservations: number;
+}
+
+interface Reservation {
+  date: string;
+  checkIn: string;
+  checkOut: string;
+  nights: number;
+  unit: string;
+  guest: string;
+  pricePerNight: number;
+  total: number;
+  paid: number;
+  balance: number;
+  status: "active" | "paid" | "upcoming" | "completed" | "cancelled";
+  channel?: string;
+  externalId?: string;
+}
 
 interface AddReservationModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAddReservation?: (reservationData: Omit<Reservation, 'id' | 'date'>) => Promise<void>
+  units?: Unit[];
+  guests?: Guest[];
 }
 
-export function AddReservationModal({ open, onOpenChange }: AddReservationModalProps) {
-  const { addReservation, guests, units } = usePMSStore()
+export function AddReservationModal({
+  open,
+  onOpenChange,
+  onAddReservation,
+  units = [],
+  guests = []
+}: AddReservationModalProps) {
   const [formData, setFormData] = useState({
     guest: "",
     unit: "",
@@ -27,7 +75,7 @@ export function AddReservationModal({ open, onOpenChange }: AddReservationModalP
     paid: "0",
   })
 
-  const availableUnits = units.filter((u) => u.status === "vacant")
+  const availableUnits = units.filter((u) => u.status === "vacant" || u.status === "vacant")
 
   const nights = useMemo(() => {
     if (formData.checkIn && formData.checkOut) {
@@ -42,32 +90,39 @@ export function AddReservationModal({ open, onOpenChange }: AddReservationModalP
   const total = nights * Number(formData.pricePerNight || 0)
   const balance = total - Number(formData.paid || 0)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.guest || !formData.unit || !formData.checkIn || !formData.checkOut) {
       toast.error("الرجاء تعبئة جميع الحقول المطلوبة")
       return
     }
 
-    const selectedGuest = guests.find((g) => g.id === formData.guest)
+    try {
+      if (onAddReservation) {
+        // Find the guest name based on the ID
+        const selectedGuest = guests.find((g) => g.id === formData.guest);
 
-    addReservation({
-      date: new Date().toISOString().split("T")[0],
-      checkIn: formData.checkIn,
-      checkOut: formData.checkOut,
-      nights,
-      unit: formData.unit,
-      guest: selectedGuest?.name || "",
-      pricePerNight: Number(formData.pricePerNight),
-      total,
-      paid: Number(formData.paid),
-      balance,
-      status: balance === 0 ? "paid" : "upcoming",
-    })
+        await onAddReservation({
+          checkIn: formData.checkIn,
+          checkOut: formData.checkOut,
+          nights,
+          unit: formData.unit,
+          guest: selectedGuest?.name || formData.guest,
+          pricePerNight: Number(formData.pricePerNight),
+          total,
+          paid: Number(formData.paid),
+          balance,
+          status: balance === 0 ? "paid" : "upcoming",
+        });
+      }
 
-    toast.success("تم إنشاء الحجز بنجاح")
-    onOpenChange(false)
-    setFormData({ guest: "", unit: "", checkIn: "", checkOut: "", pricePerNight: "", paid: "0" })
+      toast.success("تم إنشاء الحجز بنجاح")
+      onOpenChange(false)
+      setFormData({ guest: "", unit: "", checkIn: "", checkOut: "", pricePerNight: "", paid: "0" })
+    } catch (error) {
+      console.error("Error adding reservation:", error);
+      toast.error("حدث خطأ أثناء إنشاء الحجز");
+    }
   }
 
   return (

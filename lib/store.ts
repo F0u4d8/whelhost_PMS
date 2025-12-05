@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { fakeUnits } from "@/lib/fake-units-data";
 
 // Types
 export interface Unit {
@@ -162,108 +163,7 @@ export interface OwnerStatement {
 }
 
 // Initial Data
-const initialUnits: Unit[] = [
-  {
-    id: "1",
-    number: "101",
-    name: "جناح ديلوكس",
-    status: "occupied",
-    guest: "محمد أحمد العلي",
-    checkIn: "2024-01-15",
-    checkOut: "2024-01-20",
-    balance: 1500,
-    type: "suite",
-    floor: "1",
-    pricePerNight: 500,
-    propertyId: "1",
-  },
-  {
-    id: "2",
-    number: "102",
-    name: "غرفة عادية",
-    status: "vacant",
-    type: "room",
-    floor: "1",
-    pricePerNight: 300,
-    propertyId: "1",
-  },
-  {
-    id: "3",
-    number: "103",
-    name: "جناح رئاسي",
-    status: "departure-today",
-    guest: "سارة محمد الخالد",
-    checkIn: "2024-01-10",
-    checkOut: "2024-01-18",
-    balance: 0,
-    type: "suite",
-    floor: "1",
-    pricePerNight: 800,
-    propertyId: "1",
-  },
-  {
-    id: "4",
-    number: "104",
-    name: "غرفة مزدوجة",
-    status: "arrival-today",
-    guest: "أحمد خالد السعيد",
-    checkIn: "2024-01-18",
-    checkOut: "2024-01-25",
-    balance: 3200,
-    type: "room",
-    floor: "1",
-    pricePerNight: 400,
-    propertyId: "1",
-  },
-  {
-    id: "5",
-    number: "105",
-    name: "استوديو",
-    status: "out-of-service",
-    type: "studio",
-    floor: "1",
-    pricePerNight: 350,
-    propertyId: "1",
-  },
-  {
-    id: "6",
-    number: "106",
-    name: "جناح عائلي",
-    status: "occupied",
-    guest: "فاطمة علي الحسن",
-    checkIn: "2024-01-12",
-    checkOut: "2024-01-22",
-    balance: 800,
-    type: "suite",
-    floor: "1",
-    pricePerNight: 600,
-    propertyId: "1",
-  },
-  {
-    id: "7",
-    number: "201",
-    name: "غرفة فردية",
-    status: "vacant",
-    type: "room",
-    floor: "2",
-    pricePerNight: 250,
-    propertyId: "2",
-  },
-  {
-    id: "8",
-    number: "202",
-    name: "جناح تنفيذي",
-    status: "occupied",
-    guest: "عمر حسين الرشيد",
-    checkIn: "2024-01-16",
-    checkOut: "2024-01-19",
-    balance: 0,
-    type: "suite",
-    floor: "2",
-    pricePerNight: 700,
-    propertyId: "2",
-  },
-]
+const initialUnits: Unit[] = fakeUnits;
 
 const initialGuests: Guest[] = [
   {
