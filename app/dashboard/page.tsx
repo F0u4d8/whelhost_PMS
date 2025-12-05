@@ -5,7 +5,7 @@ import { KPICard } from "@/components/kpi-card"
 import { ProgressBar } from "@/components/progress-bar"
 import { ActivityTimeline } from "@/components/activity-timeline"
 import { OccupancyChartServer } from "@/components/charts/occupancy-chart-server"
-import { UnitStatusChart } from "@/components/charts/unit-status-chart"
+import { UnitStatusChartServer } from "@/components/charts/unit-status-chart-server"
 import { ReservationSourcesChart } from "@/components/charts/reservation-sources-chart-server"
 import { UnitStatusList } from "@/components/unit-status-list"
 import { Building2, CalendarPlus, CalendarCheck, Users, Banknote } from "lucide-react";
@@ -352,7 +352,7 @@ export default async function DashboardPage() {
           {/* Unit Status Pie Chart */}
           <div className="bg-card rounded-2xl border border-border p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">توزيع حالة الوحدات</h3>
-            <UnitStatusChart units={units} />
+            <UnitStatusChartServer hotelId={userHotel.id} />
           </div>
 
           {/* Reservation Sources */}

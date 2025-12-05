@@ -3,7 +3,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import type { Invoice } from "@/lib/store"
+import type { Invoice } from "@/lib/invoices-server-actions"
 import { FileText, Calendar, User, Receipt, Printer } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"

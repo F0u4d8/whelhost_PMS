@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
+import { OccupancyChartClient } from "./occupancy-chart";
 
 interface OccupancyData {
   day: string;
@@ -9,7 +10,7 @@ interface OccupancyData {
 export async function OccupancyChartServer({ hotelId }: { hotelId: string }) {
   const supabase = await createClient();
   const user = await requireAuth();
-  
+
   // Verify that the user has access to this hotel
   const { data: userHotel, error: hotelError } = await supabase
     .from('hotels')
@@ -29,9 +30,8 @@ export async function OccupancyChartServer({ hotelId }: { hotelId: string }) {
       { day: "الخميس", occupancy: 0 },
       { day: "الجمعة", occupancy: 0 },
     ];
-    
-    const OccupancyChart = (await import("./occupancy-chart")).OccupancyChart;
-    return <OccupancyChart data={defaultData} />;
+
+    return <OccupancyChartClient data={defaultData} />;
   }
 
   // Get total number of units to calculate occupancy percentage
@@ -50,9 +50,8 @@ export async function OccupancyChartServer({ hotelId }: { hotelId: string }) {
       { day: "الخميس", occupancy: 0 },
       { day: "الجمعة", occupancy: 0 },
     ];
-    
-    const OccupancyChart = (await import("./occupancy-chart")).OccupancyChart;
-    return <OccupancyChart data={defaultData} />;
+
+    return <OccupancyChartClient data={defaultData} />;
   }
 
   // Calculate occupancy for the last 7 days
@@ -66,14 +65,14 @@ export async function OccupancyChartServer({ hotelId }: { hotelId: string }) {
 
   // Define Arabic day names
   const arabicDays = ["السبت", "الأحد", "الإثنين", "الثلاثاء", "الأربعاء", "الخميس", "الجمعة"];
-  
+
   // Calculate occupancy for each day
   const occupancyData: OccupancyData[] = [];
-  
+
   for (let i = 0; i < 7; i++) {
     const date = last7Days[i];
     const dayName = arabicDays[i];
-    
+
     // Get the number of occupied units on this date
     const { count: occupiedUnits } = await supabase
       .from('bookings')
@@ -82,16 +81,15 @@ export async function OccupancyChartServer({ hotelId }: { hotelId: string }) {
       .lte('check_in', date)  // Check-in date is before or on this date
       .gte('check_out', date) // Check-out date is after or on this date
       .in('status', ['confirmed', 'checked_in']); // Active bookings only
-    
+
     // Calculate occupancy percentage
     const occupancy = totalUnits > 0 ? Math.round((occupiedUnits! / totalUnits) * 100) : 0;
-    
+
     occupancyData.push({
       day: dayName,
       occupancy
     });
   }
 
-  const OccupancyChart = (await import("./occupancy-chart")).OccupancyChart;
-  return <OccupancyChart data={occupancyData} />;
+  return <OccupancyChartClient data={occupancyData} />;
 }

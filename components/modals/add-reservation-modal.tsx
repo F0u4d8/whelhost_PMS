@@ -75,7 +75,7 @@ export function AddReservationModal({
     paid: "0",
   })
 
-  const availableUnits = units.filter((u) => u.status === "vacant" || u.status === "vacant")
+  const availableUnits = units.filter((u) => u.status === "vacant" || u.status === "arrival-today")
 
   const nights = useMemo(() => {
     if (formData.checkIn && formData.checkOut) {
@@ -102,11 +102,14 @@ export function AddReservationModal({
         // Find the guest name based on the ID
         const selectedGuest = guests.find((g) => g.id === formData.guest);
 
+        // Find the unit name based on the ID
+        const selectedUnit = units.find((u) => u.id === formData.unit);
+
         await onAddReservation({
           checkIn: formData.checkIn,
           checkOut: formData.checkOut,
           nights,
-          unit: formData.unit,
+          unit: selectedUnit?.name || selectedUnit?.number || formData.unit,
           guest: selectedGuest?.name || formData.guest,
           pricePerNight: Number(formData.pricePerNight),
           total,
@@ -153,7 +156,7 @@ export function AddReservationModal({
               <Select
                 value={formData.unit}
                 onValueChange={(v) => {
-                  const unit = units.find((u) => u.number === v)
+                  const unit = units.find((u) => u.id === v)
                   setFormData({ ...formData, unit: v, pricePerNight: String(unit?.pricePerNight || "") })
                 }}
               >
@@ -162,7 +165,7 @@ export function AddReservationModal({
                 </SelectTrigger>
                 <SelectContent>
                   {availableUnits.map((unit) => (
-                    <SelectItem key={unit.id} value={unit.number}>
+                    <SelectItem key={unit.id} value={unit.id}>
                       {unit.number} - {unit.name}
                     </SelectItem>
                   ))}

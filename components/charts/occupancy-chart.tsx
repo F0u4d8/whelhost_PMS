@@ -40,3 +40,5 @@ export function OccupancyChart({ data }: OccupancyChartProps) {
     </ResponsiveContainer>
   )
 }
+
+export { OccupancyChart as OccupancyChartClient };

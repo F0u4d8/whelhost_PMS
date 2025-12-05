@@ -2,55 +2,88 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { usePMSStore } from "@/lib/store"
 import { toast } from "sonner"
+import { Invoice } from "@/lib/invoices-server-actions"
+import { getReservationsPageData } from "@/lib/reservations-server-actions"
 
 interface AddInvoiceModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onAddInvoice?: (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => Promise<void>
 }
 
 const VAT_RATE = 0.15
 
-export function AddInvoiceModal({ open, onOpenChange }: AddInvoiceModalProps) {
-  const { addInvoice, reservations } = usePMSStore()
+export function AddInvoiceModal({ open, onOpenChange, onAddInvoice }: AddInvoiceModalProps) {
+  const [reservations, setReservations] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     reservation: "",
     subtotal: "",
   })
 
-  const selectedReservation = reservations.find((r) => r.id === formData.reservation)
-  const subtotal = Number(formData.subtotal || selectedReservation?.total || 0)
-  const vat = subtotal * VAT_RATE
-  const total = subtotal + vat
+  // Load reservations when the modal opens
+  useEffect(() => {
+    if (open) {
+      const loadReservations = async () => {
+        setIsLoading(true);
+        try {
+          const pageData = await getReservationsPageData();
+          setReservations(pageData.reservations);
+        } catch (error) {
+          console.error("Error loading reservations:", error);
+          toast.error("حدث خطأ أثناء تحميل الحجوزات");
+        } finally {
+          setIsLoading(false);
+        }
+      }
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
+      loadReservations();
+      // Reset form when modal opens
+      setFormData({ reservation: "", subtotal: "" });
+    }
+  }, [open]);
+
+  const selectedReservation = reservations.find((r) => r.id === formData.reservation);
+  const subtotal = Number(formData.subtotal || selectedReservation?.total || 0);
+  const vat = subtotal * VAT_RATE;
+  const total = subtotal + vat;
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!formData.reservation) {
-      toast.error("الرجاء اختيار الحجز")
-      return
+      toast.error("الرجاء اختيار الحجز");
+      return;
     }
 
-    addInvoice({
-      date: new Date().toISOString().split("T")[0],
-      guest: selectedReservation?.guest || "",
-      contractNumber: formData.reservation,
-      subtotal,
-      vat,
-      total,
-      status: "pending",
-    })
+    try {
+      if (onAddInvoice) {
+        const invoiceData: Omit<Invoice, 'id' | 'createdAt'> = {
+          date: new Date().toISOString().split("T")[0],
+          guest: selectedReservation?.guest || "Guest",
+          contractNumber: formData.reservation,
+          subtotal,
+          vat,
+          total,
+          status: "pending",
+        };
 
-    toast.success("تم إنشاء الفاتورة بنجاح")
-    onOpenChange(false)
-    setFormData({ reservation: "", subtotal: "" })
-  }
+        await onAddInvoice(invoiceData);
+        toast.success("تم إنشاء الفاتورة بنجاح");
+        onOpenChange(false);
+        setFormData({ reservation: "", subtotal: "" });
+      }
+    } catch (error) {
+      console.error("Error creating invoice:", error);
+      toast.error("حدث خطأ أثناء إنشاء الفاتورة");
+    }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -64,8 +97,8 @@ export function AddInvoiceModal({ open, onOpenChange }: AddInvoiceModalProps) {
             <Select
               value={formData.reservation}
               onValueChange={(v) => {
-                const res = reservations.find((r) => r.id === v)
-                setFormData({ ...formData, reservation: v, subtotal: String(res?.total || "") })
+                const res = reservations.find((r) => r.id === v);
+                setFormData({ ...formData, reservation: v, subtotal: String(res?.total || "") });
               }}
             >
               <SelectTrigger className="rounded-xl bg-background border-border">
@@ -89,6 +122,7 @@ export function AddInvoiceModal({ open, onOpenChange }: AddInvoiceModalProps) {
               onChange={(e) => setFormData({ ...formData, subtotal: e.target.value })}
               placeholder="2000"
               className="rounded-xl bg-background border-border"
+              disabled={isLoading}
             />
           </div>
 
@@ -112,7 +146,7 @@ export function AddInvoiceModal({ open, onOpenChange }: AddInvoiceModalProps) {
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
               إلغاء
             </Button>
-            <Button type="submit" className="rounded-xl">
+            <Button type="submit" className="rounded-xl" disabled={isLoading}>
               إنشاء الفاتورة
             </Button>
           </DialogFooter>

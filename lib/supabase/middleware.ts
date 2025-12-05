@@ -59,8 +59,9 @@ export async function updateSession(request: NextRequest) {
     // If user is not authenticated, allow public access but redirect protected routes
     if (!user) {
       // Redirect dashboard and other protected routes to login
-      if (request.nextUrl.pathname.startsWith("/dashboard") ||
-          request.nextUrl.pathname.startsWith("/api/protected")) {
+      if (request.nextUrl.pathname.startsWith("/dashboard") &&
+          !request.nextUrl.pathname.startsWith("/dashboard/upgrade")) {
+        // Don't redirect the upgrade page itself
         const url = request.nextUrl.clone()
         url.pathname = "/login"
         return NextResponse.redirect(url)
@@ -71,6 +72,11 @@ export async function updateSession(request: NextRequest) {
     // Protect dashboard routes (only for authenticated users)
     if (request.nextUrl.pathname.startsWith("/dashboard")) {
       try {
+        // Skip premium check if accessing the upgrade page
+        if (request.nextUrl.pathname.startsWith("/dashboard/upgrade")) {
+          return supabaseResponse;
+        }
+
         // Check if user has premium access for PMS features
         const { data: profile, error: profileError } = await supabase
           .from("profiles")
@@ -84,11 +90,6 @@ export async function updateSession(request: NextRequest) {
           const url = request.nextUrl.clone()
           url.pathname = "/dashboard/upgrade"
           return NextResponse.redirect(url)
-        }
-
-        // If accessing the upgrade page, allow access regardless of premium status
-        if (request.nextUrl.pathname.startsWith("/dashboard/upgrade")) {
-          return supabaseResponse;
         }
 
         const isPremiumExpired = profile?.premium_expires_at ? new Date(profile.premium_expires_at) < new Date() : true

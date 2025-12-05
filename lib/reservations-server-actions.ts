@@ -178,20 +178,102 @@ export async function getReservationsPageData(): Promise<ReservationsPageData> {
   // Get units for the user's hotels
   const { data: unitsData, error: unitsError } = await supabase
     .from("units")
-    .select("id, name as number, name, status, base_price as pricePerNight")
+    .select("id, number, name, status, base_price as pricePerNight")
     .in("hotel_id", hotelIds);
 
   let units: Unit[] = [];
   if (unitsError) {
     console.warn("Error fetching units:", unitsError.message);
+
+    // Fallback: Try simpler query if the first one fails
+    try {
+      // Check if units table exists at all
+      const { error: tableCheckError } = await supabase
+        .from("units")
+        .select("id")
+        .limit(1);
+
+      if (tableCheckError && tableCheckError.message.includes("does not exist")) {
+        console.warn("Units table does not exist");
+        units = []; // Return empty array if no units table
+      } else {
+        // If it's a different error, try a minimal query
+        const { data: minimalUnitsData, error: minimalUnitsError } = await supabase
+          .from("units")
+          .select("id, number, name")
+          .in("hotel_id", hotelIds);
+
+        if (minimalUnitsError) {
+          console.error("Error fetching minimal units:", minimalUnitsError);
+          units = []; // Return empty array on error
+        } else {
+          units = minimalUnitsData.map(item => ({
+            id: item.id,
+            number: item.number || "N/A",
+            name: item.name || "Unit",
+            status: "vacant", // Default status
+            pricePerNight: 0, // Default price
+          }));
+        }
+      }
+    } catch (err) {
+      console.error("Error in units fallback:", err);
+      units = [];
+    }
   } else {
     units = unitsData.map(item => ({
       id: item.id,
-      number: item.number || "N/A",
-      name: item.name || "Unit",
+      number: item.number || item.id, // Use ID if number is not available
+      name: item.name || item.number || "Unit",
       status: mapUnitStatus(item.status) || "vacant",
-      pricePerNight: item.pricePerNight,
+      pricePerNight: item.pricePerNight || 0,
     }));
+
+    // Get current bookings to update unit statuses
+    const { data: bookingData, error: bookingError } = await supabase
+      .from("bookings")
+      .select("id, unit_id, check_in, check_out, status")
+      .in("hotel_id", hotelIds)
+      .gte("check_out", new Date().toISOString().split('T')[0]) // Only future and current bookings
+      .or("status.eq.confirmed,status.eq.checked_in");
+
+    if (bookingError) {
+      console.warn("Error fetching bookings for unit status:", bookingError.message);
+    } else {
+      const today = new Date().toISOString().split('T')[0];
+
+      // Update the unit statuses based on bookings
+      units = units.map(unit => {
+        // Check if the unit has an active booking
+        const activeBooking = bookingData.find(booking =>
+          booking.unit_id === unit.id &&
+          booking.check_in <= today &&
+          booking.check_out > today
+        );
+
+        // Check if the unit has an upcoming booking starting today
+        const upcomingBooking = bookingData.find(booking =>
+          booking.unit_id === unit.id &&
+          booking.check_in === today
+        );
+
+        // Check if the unit has a departing booking today
+        const departingBooking = bookingData.find(booking =>
+          booking.unit_id === unit.id &&
+          booking.check_out === today
+        );
+
+        if (activeBooking) {
+          return { ...unit, status: "occupied" };
+        } else if (upcomingBooking) {
+          return { ...unit, status: "arrival-today" };
+        } else if (departingBooking) {
+          return { ...unit, status: "departure-today" };
+        } else {
+          return unit;
+        }
+      });
+    }
   }
 
   // Get guests for the user's hotels
