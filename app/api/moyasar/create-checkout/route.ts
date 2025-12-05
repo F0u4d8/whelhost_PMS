@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
           currency,
           description,
           source: {
-            type: "url", // Using URL source type to get redirect URL
+            type: "card", // Changed from "url" to "card" to match allowed source types
           },
           metadata: {
             ...metadata,
