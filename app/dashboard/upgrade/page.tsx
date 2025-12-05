@@ -70,15 +70,14 @@ export default async function UpgradePage() {
                 </ul>
               </div>
               <div className="pt-4">
-                <Button 
-                  className="w-full bg-primary hover:bg-primary/90" 
-                  onClick={() => {
-                    // In a real implementation, this would redirect to a payment page
-                    window.location.href = '/dashboard/settings';
-                  }}
-                >
-                  ترقية الحساب الآن
-                </Button>
+                <form action="/dashboard/settings" method="get">
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90"
+                    type="submit"
+                  >
+                    ترقية الحساب الآن
+                  </Button>
+                </form>
               </div>
             </div>
           </CardContent>

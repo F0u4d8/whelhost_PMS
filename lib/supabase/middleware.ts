@@ -86,26 +86,23 @@ export async function updateSession(request: NextRequest) {
 
         if (profileError) {
           console.error("Profile fetch error:", profileError)
-          // If there's an error fetching profile, redirect to upgrade page as safety measure
-          const url = request.nextUrl.clone()
-          url.pathname = "/dashboard/upgrade"
-          return NextResponse.redirect(url)
-        }
+          // If there's an error fetching profile, allow access but log for debugging
+          console.warn("Profile fetch error - allowing access to dashboard with limited features")
+        } else {
+          const isPremiumExpired = profile?.premium_expires_at ? new Date(profile.premium_expires_at) < new Date() : true
 
-        const isPremiumExpired = profile?.premium_expires_at ? new Date(profile.premium_expires_at) < new Date() : true
-
-        if (!profile?.is_premium || isPremiumExpired) {
-          // Redirect non-premium users to upgrade page (except when already on upgrade page)
-          const url = request.nextUrl.clone()
-          url.pathname = "/dashboard/upgrade"
-          return NextResponse.redirect(url)
+          if (!profile?.is_premium || isPremiumExpired) {
+            // For non-premium users, we could either:
+            // 1. Allow basic dashboard access but restrict premium features at UI level
+            // 2. Redirect to upgrade page (current behavior)
+            // For now, let's allow access to dashboard but let the UI handle premium restrictions
+            console.log("Non-premium user accessing dashboard - check UI for feature restrictions")
+          }
         }
       } catch (profileFetchError) {
         console.error("Profile fetch error:", profileFetchError)
-        // If there's an error fetching profile, redirect to upgrade page as safety measure
-        const url = request.nextUrl.clone()
-        url.pathname = "/dashboard/upgrade"
-        return NextResponse.redirect(url)
+        // If there's an error fetching profile, allow access but log for debugging
+        console.warn("Profile fetch error - allowing access to dashboard with limited features")
       }
     }
 

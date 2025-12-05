@@ -38,7 +38,7 @@ export function UnitStatusList({ units }: UnitStatusListProps) {
   return (
     <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-3">
       {units.map((unit) => {
-        const style = statusStyles[unit.status]
+        const style = statusStyles[unit.status] || statusStyles.vacant; // Default to vacant style if status not found
         return (
           <div
             key={unit.id}

@@ -12,6 +12,7 @@ interface ViewInvoiceModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   invoice: Invoice | null
+  onAddReceiptForInvoice?: (invoice: Invoice) => void
 }
 
 const statusConfig = {
@@ -89,14 +90,47 @@ export function ViewInvoiceModal({ open, onOpenChange, invoice }: ViewInvoiceMod
           </div>
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl flex-1">
-            إغلاق
-          </Button>
-          <Button onClick={handlePrint} className="rounded-xl flex-1 gap-2">
-            <Printer className="w-4 h-4" />
-            طباعة
-          </Button>
+        <div className="space-y-4">
+          {/* Create receipt prompt */}
+          <div className="flex items-center gap-3 p-3 bg-blue-50 rounded-xl border border-blue-200">
+            <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+              <span className="text-blue-600 text-sm">؟</span>
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-foreground">هل تريد إنشاء سند؟</p>
+              <p className="text-xs text-muted-foreground">إنشاء سند قبض لهذه الفاتورة</p>
+            </div>
+            <Button
+              variant="default"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => {
+                // Close the invoice modal and open the add receipt modal
+                onOpenChange(false);
+                if (invoice && onAddReceiptForInvoice) {
+                  onAddReceiptForInvoice(invoice);
+                } else {
+                  // Fallback if callback is not provided
+                  toast.success("جاري تحويلك لصفحة إنشاء السند...");
+                  setTimeout(() => {
+                    toast.info("يرجى الذهاب إلى صفحة السندات لإنشاء سند جديد");
+                  }, 1000);
+                }
+              }}
+            >
+              إنشاء
+            </Button>
+          </div>
+
+          <div className="flex gap-3">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl flex-1">
+              إغلاق
+            </Button>
+            <Button onClick={handlePrint} className="rounded-xl flex-1 gap-2">
+              <Printer className="w-4 h-4" />
+              طباعة
+            </Button>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

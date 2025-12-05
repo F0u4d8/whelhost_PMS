@@ -26,6 +26,7 @@ export function AddInvoiceModal({ open, onOpenChange, onAddInvoice }: AddInvoice
   const [formData, setFormData] = useState({
     reservation: "",
     subtotal: "",
+    date: new Date().toISOString().split('T')[0], // Default to today's date
   })
 
   // Load reservations when the modal opens
@@ -65,7 +66,7 @@ export function AddInvoiceModal({ open, onOpenChange, onAddInvoice }: AddInvoice
     try {
       if (onAddInvoice) {
         const invoiceData: Omit<Invoice, 'id' | 'createdAt'> = {
-          date: new Date().toISOString().split("T")[0],
+          date: formData.date,
           guest: selectedReservation?.guest || "Guest",
           contractNumber: formData.reservation,
           subtotal,
@@ -77,11 +78,17 @@ export function AddInvoiceModal({ open, onOpenChange, onAddInvoice }: AddInvoice
         await onAddInvoice(invoiceData);
         toast.success("تم إنشاء الفاتورة بنجاح");
         onOpenChange(false);
-        setFormData({ reservation: "", subtotal: "" });
+        setFormData({
+          reservation: "",
+          subtotal: "",
+          date: new Date().toISOString().split('T')[0] // Reset to today's date
+        });
       }
     } catch (error) {
       console.error("Error creating invoice:", error);
-      toast.error("حدث خطأ أثناء إنشاء الفاتورة");
+      // Provide more specific error feedback
+      const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء إنشاء الفاتورة";
+      toast.error(errorMessage);
     }
   };
 
@@ -92,26 +99,38 @@ export function AddInvoiceModal({ open, onOpenChange, onAddInvoice }: AddInvoice
           <DialogTitle className="text-foreground">إنشاء فاتورة جديدة</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="space-y-2">
-            <Label>رقم الحجز</Label>
-            <Select
-              value={formData.reservation}
-              onValueChange={(v) => {
-                const res = reservations.find((r) => r.id === v);
-                setFormData({ ...formData, reservation: v, subtotal: String(res?.total || "") });
-              }}
-            >
-              <SelectTrigger className="rounded-xl bg-background border-border">
-                <SelectValue placeholder="اختر الحجز" />
-              </SelectTrigger>
-              <SelectContent>
-                {reservations.map((res) => (
-                  <SelectItem key={res.id} value={res.id}>
-                    {res.id} - {res.guest}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>رقم الحجز</Label>
+              <Select
+                value={formData.reservation}
+                onValueChange={(v) => {
+                  const res = reservations.find((r) => r.id === v);
+                  setFormData({ ...formData, reservation: v, subtotal: String(res?.total || "") });
+                }}
+              >
+                <SelectTrigger className="rounded-xl bg-background border-border">
+                  <SelectValue placeholder="اختر الحجز" />
+                </SelectTrigger>
+                <SelectContent>
+                  {reservations.map((res) => (
+                    <SelectItem key={res.id} value={res.id}>
+                      {res.id} - {res.guest}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>تاريخ الفاتورة</Label>
+              <Input
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                className="rounded-xl bg-background border-border"
+              />
+            </div>
           </div>
 
           <div className="space-y-2">

@@ -1,10 +1,11 @@
 'use client'
 
 import Link from 'next/link';
-import { Building2, Bell, Moon, Sun, User, LogOut, Home } from 'lucide-react'
+import { Building2, Moon, Sun, User, LogOut, Home } from 'lucide-react'
 import { useTheme } from 'next-themes'
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/lib/supabase/client';
+import { NotificationBell } from '@/components/notification-bell';
 
 export function Header() {
   const { theme, setTheme } = useTheme();
@@ -36,10 +37,7 @@ export function Header() {
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>
 
-        <button className="relative p-2 rounded-lg hover:bg-accent transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full"></span>
-        </button>
+        <NotificationBell />
 
         <div className="flex items-center gap-2">
           <Link href="/dashboard" className="p-2 rounded-lg hover:bg-accent transition-colors">

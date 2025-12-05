@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
+import { createNotification } from "./notifications-server-actions";
 
 export interface Message {
   id: string;
@@ -201,6 +202,29 @@ export async function sendMessage(content: string, guestId: string): Promise<Mes
   if (error) {
     console.error("Error sending message:", error);
     throw new Error("Failed to send message");
+  }
+
+  // Create a notification for the new message
+  try {
+    // Get guest name to include in the notification
+    const { data: guestData } = await supabase
+      .from("guests")
+      .select("first_name, last_name")
+      .eq("id", guestId)
+      .single();
+
+    const guestName = guestData ? `${guestData.first_name} ${guestData.last_name}`.trim() || "ضيف" : "ضيف";
+
+    await createNotification(
+      userHotels[0].id,
+      "رسالة جديدة",
+      `لقد تلقيت رسالة جديدة من ${guestName}`,
+      "info",
+      "/dashboard/inbox"
+    );
+  } catch (notificationError) {
+    console.warn("Notification creation failed (this is non-critical):", notificationError);
+    // Don't throw an error for notification failure as it's not critical to the message operation
   }
 
   // Return the created message

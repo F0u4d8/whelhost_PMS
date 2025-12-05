@@ -2,6 +2,7 @@
 
 import { createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
+import { createNotification } from "./notifications-server-actions";
 
 export interface Reservation {
   id: string;
@@ -443,7 +444,7 @@ export async function addReservation(reservationData: Omit<Reservation, 'id'>): 
 
   if (error) {
     console.error("Error adding reservation:", error);
-    
+
     // Fallback: try with minimal required fields
     const minimalInsertData = {
       hotel_id: userHotels[0].id,
@@ -463,6 +464,21 @@ export async function addReservation(reservationData: Omit<Reservation, 'id'>): 
     if (minimalError) {
       console.error("Error adding reservation with minimal data:", minimalError);
       throw new Error("Failed to add reservation: " + minimalError.message);
+    }
+
+    // Create a notification for the new reservation
+    try {
+      // Only create notification if the notifications table exists
+      await createNotification(
+        userHotels[0].id,
+        "حجز جديد",
+        `تم إنشاء حجز جديد من ${reservationData.guest} للوحدة ${reservationData.unit}`,
+        "success",
+        "/dashboard/reservations"
+      );
+    } catch (notificationError) {
+      console.warn("Notification creation failed (this is non-critical):", notificationError);
+      // Don't throw an error for notification failure as it's not critical to the reservation operation
     }
 
     // Return a minimal reservation object
@@ -485,6 +501,21 @@ export async function addReservation(reservationData: Omit<Reservation, 'id'>): 
 
   // Calculate balance
   const balance = (data.total_amount || 0) - (data.paid_amount || 0);
+
+  // Create a notification for the new reservation
+  try {
+    // Only create notification if the notifications table exists
+    await createNotification(
+      userHotels[0].id,
+      "حجز جديد",
+      `تم إنشاء حجز جديد من ${reservationData.guest} للوحدة ${reservationData.unit}`,
+      "success",
+      "/dashboard/reservations"
+    );
+  } catch (notificationError) {
+    console.warn("Notification creation failed (this is non-critical):", notificationError);
+    // Don't throw an error for notification failure as it's not critical to the reservation operation
+  }
 
   // Return the created reservation
   return {

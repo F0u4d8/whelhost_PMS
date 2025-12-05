@@ -50,19 +50,24 @@ interface DashboardData {
 async function getDashboardData(hotelId: string): Promise<DashboardData> {
   const supabase = await createClient();
 
-  // Fetch KPI data
+  // Fetch KPI data with error handling for each query
   const [
-    { count: totalUnits },
-    { count: newBookings },
-    { count: activeBookings },
-    { count: currentGuests },
-    { data: revenueData }
+    unitsResult,
+    newBookingsResult,
+    activeBookingsResult,
+    currentGuestsResult,
+    revenueResult
   ] = await Promise.all([
     // Total units
     supabase
       .from('units')
       .select('*', { count: 'exact', head: true })
-      .eq('hotel_id', hotelId),
+      .eq('hotel_id', hotelId)
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching total units:', error);
+        return { count: 0 };
+      }),
 
     // New bookings in the last 7 days
     supabase
@@ -70,7 +75,12 @@ async function getDashboardData(hotelId: string): Promise<DashboardData> {
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
       .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-      .in('status', ['pending', 'confirmed']),
+      .in('status', ['pending', 'confirmed'])
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching new bookings:', error);
+        return { count: 0 };
+      }),
 
     // Active bookings (where check_in <= today and check_out >= today)
     supabase
@@ -79,14 +89,24 @@ async function getDashboardData(hotelId: string): Promise<DashboardData> {
       .eq('hotel_id', hotelId)
       .gte('check_out', new Date().toISOString().split('T')[0])
       .lte('check_in', new Date().toISOString().split('T')[0])
-      .in('status', ['confirmed', 'checked_in']),
+      .in('status', ['confirmed', 'checked_in'])
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching active bookings:', error);
+        return { count: 0 };
+      }),
 
     // Current guests (checked in but not checked out yet)
     supabase
       .from('bookings')
       .select('*', { count: 'exact', head: true })
       .eq('hotel_id', hotelId)
-      .eq('status', 'checked_in'),
+      .eq('status', 'checked_in')
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching current guests:', error);
+        return { count: 0 };
+      }),
 
     // Today's revenue
     supabase
@@ -95,40 +115,70 @@ async function getDashboardData(hotelId: string): Promise<DashboardData> {
       .eq('hotel_id', hotelId)
       .eq('status', 'checked_out')
       .eq('check_out', new Date().toISOString().split('T')[0])
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching revenue data:', error);
+        return { data: [] };
+      })
   ]);
 
   // Calculate today's revenue
-  const todayRevenue = revenueData?.reduce((sum, booking) => sum + (booking.total_amount || 0), 0) || 0;
+  const todayRevenue = revenueResult?.data?.reduce((sum, booking) => sum + (booking.total_amount || 0), 0) || 0;
 
-  // Fetch recent activities
-  const { data: recentBookings } = await supabase
-    .from('bookings')
-    .select(`
-      id,
-      check_in,
-      check_out,
-      status,
-      source,
-      created_at,
-      guests(first_name, last_name)
-    `)
-    .eq('hotel_id', hotelId)
-    .order('created_at', { ascending: false })
-    .limit(5);
+  // Fetch recent activities with error handling
+  let recentBookings, recentPayments;
+  try {
+    const bookingsResult = await supabase
+      .from('bookings')
+      .select(`
+        id,
+        check_in,
+        check_out,
+        status,
+        source,
+        created_at,
+        guests(first_name, last_name)
+      `)
+      .eq('hotel_id', hotelId)
+      .order('created_at', { ascending: false })
+      .limit(5);
 
-  const { data: recentPayments } = await supabase
-    .from('payments')
-    .select(`
-      id,
-      amount,
-      method,
-      created_at,
-      booking_id,
-      bookings(units(name))
-    `)
-    .eq('hotel_id', hotelId)
-    .order('created_at', { ascending: false })
-    .limit(5);
+    if (bookingsResult.error) {
+      console.error('Error fetching recent bookings:', bookingsResult.error);
+      recentBookings = [];
+    } else {
+      recentBookings = bookingsResult.data;
+    }
+  } catch (error) {
+    console.error('Error fetching recent bookings:', error);
+    recentBookings = [];
+  }
+
+  try {
+    const paymentsResult = await supabase
+      .from('payments')
+      .select(`
+        id,
+        amount,
+        method,
+        created_at,
+        booking_id,
+        bookings(units(name))
+      `)
+      .eq('hotel_id', hotelId)
+      .order('created_at', { ascending: false })
+      .limit(5);
+
+    if (paymentsResult.error) {
+      console.error('Error fetching recent payments:', paymentsResult.error);
+      recentPayments = [];
+    } else {
+      recentPayments = paymentsResult.data;
+    }
+  } catch (error) {
+    console.error('Error fetching recent payments:', error);
+    recentPayments = [];
+  }
 
   // Combine and format activities
   const activities: Activity[] = [];
@@ -175,12 +225,25 @@ async function getDashboardData(hotelId: string): Promise<DashboardData> {
   // Take only the last 5 activities
   const latestActivities = activities.slice(0, 5);
 
-  // Fetch units
-  const { data: unitsData } = await supabase
-    .from('units')
-    .select('id, name, status')
-    .eq('hotel_id', hotelId)
-    .limit(12);
+  // Fetch units with error handling
+  let unitsData;
+  try {
+    const unitsResult = await supabase
+      .from('units')
+      .select('id, name, status')
+      .eq('hotel_id', hotelId)
+      .limit(12);
+
+    if (unitsResult.error) {
+      console.error('Error fetching units:', unitsResult.error);
+      unitsData = [];
+    } else {
+      unitsData = unitsResult.data;
+    }
+  } catch (error) {
+    console.error('Error fetching units:', error);
+    unitsData = [];
+  }
 
   const units: Unit[] = unitsData?.map(unit => ({
     id: unit.id,
@@ -188,27 +251,52 @@ async function getDashboardData(hotelId: string): Promise<DashboardData> {
     status: unit.status as 'occupied' | 'vacant' | 'reserved' | 'maintenance',
   })) || [];
 
-  // Calculate checkout and checkin ready counts
+  // Calculate checkout and checkin ready counts with error handling
   const today = new Date().toISOString().split('T')[0];
-  const { count: checkoutReadyCount } = await supabase
-    .from('bookings')
-    .select('*', { count: 'exact', head: true })
-    .eq('hotel_id', hotelId)
-    .eq('check_out', today)
-    .eq('status', 'checked_in');
+  let checkoutReadyCount, checkinReadyCount;
+  try {
+    const checkoutResult = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .eq('check_out', today)
+      .eq('status', 'checked_in')
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching checkout ready count:', error);
+        return { count: 0 };
+      });
 
-  const { count: checkinReadyCount } = await supabase
-    .from('bookings')
-    .select('*', { count: 'exact', head: true })
-    .eq('hotel_id', hotelId)
-    .eq('check_in', today)
-    .eq('status', 'confirmed');
+    checkoutReadyCount = checkoutResult.count || 0;
+  } catch (error) {
+    console.error('Error fetching checkout ready count:', error);
+    checkoutReadyCount = 0;
+  }
+
+  try {
+    const checkinResult = await supabase
+      .from('bookings')
+      .select('*', { count: 'exact', head: true })
+      .eq('hotel_id', hotelId)
+      .eq('check_in', today)
+      .eq('status', 'confirmed')
+      .then(result => result)
+      .catch(error => {
+        console.error('Error fetching checkin ready count:', error);
+        return { count: 0 };
+      });
+
+    checkinReadyCount = checkinResult.count || 0;
+  } catch (error) {
+    console.error('Error fetching checkin ready count:', error);
+    checkinReadyCount = 0;
+  }
 
   const kpiData: KPIData = {
-    totalUnits: totalUnits || 0,
-    newBookings: newBookings || 0,
-    activeBookings: activeBookings || 0,
-    currentGuests: currentGuests || 0,
+    totalUnits: unitsResult.count || 0,
+    newBookings: newBookingsResult.count || 0,
+    activeBookings: activeBookingsResult.count || 0,
+    currentGuests: currentGuestsResult.count || 0,
     todayRevenue: todayRevenue || 0,
   };
 
@@ -216,8 +304,8 @@ async function getDashboardData(hotelId: string): Promise<DashboardData> {
     kpiData,
     activities: latestActivities,
     units,
-    checkoutReady: { count: checkoutReadyCount || 0, max: totalUnits || 100 },
-    checkinReady: { count: checkinReadyCount || 0, max: totalUnits || 100 }
+    checkoutReady: { count: checkoutReadyCount || 0, max: unitsResult.count || 100 },
+    checkinReady: { count: checkinReadyCount || 0, max: unitsResult.count || 100 }
   };
 }
 
@@ -243,6 +331,19 @@ export default async function DashboardPage() {
         </div>
       </MainLayout>
     );
+  }
+
+  // Check if user has premium access for premium features
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("is_premium, premium_expires_at")
+    .eq("id", user.id)
+    .single();
+
+  let isPremium = false;
+  if (!profileError && profile) {
+    const isPremiumExpired = profile.premium_expires_at ? new Date(profile.premium_expires_at) < new Date() : true;
+    isPremium = profile.is_premium && !isPremiumExpired;
   }
 
   let dashboardData: DashboardData | null = null;
@@ -272,7 +373,7 @@ export default async function DashboardPage() {
 
   return (
     <MainLayout>
-      {/* KPI Cards */}
+      {/* KPI Cards - These are basic features available to all users */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4 mb-8">
           <KPICard
             title="إجمالي الوحدات"
@@ -310,7 +411,7 @@ export default async function DashboardPage() {
           />
         </div>
 
-        {/* Progress Bars */}
+        {/* Progress Bars - These are basic features available to all users */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
           <div className="bg-card rounded-2xl border border-border p-5">
             <h3 className="text-sm font-medium text-foreground mb-4">جاهز للمغادرة</h3>
@@ -332,41 +433,73 @@ export default async function DashboardPage() {
           </div>
         </div>
 
-        {/* Charts Grid */}
+        {/* Charts Grid - Show premium charts only to premium users */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Weekly Occupancy */}
+          {/* Weekly Occupancy - Available to all users */}
           <div className="bg-card rounded-2xl border border-border p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">نسبة الإشغال الأسبوعية</h3>
             <OccupancyChartServer hotelId={userHotel.id} />
           </div>
 
-          {/* Activity Timeline */}
+          {/* Activity Timeline - Available to all users */}
           <div className="bg-card rounded-2xl border border-border p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">آخر النشاطات</h3>
             <ActivityTimeline activities={activities} />
           </div>
         </div>
 
-        {/* Second Row Charts */}
+        {/* Second Row Charts - These could be premium features */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          {/* Unit Status Pie Chart */}
+          {/* Unit Status Pie Chart - Available to all users */}
           <div className="bg-card rounded-2xl border border-border p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">توزيع حالة الوحدات</h3>
-            <UnitStatusChartServer hotelId={userHotel.id} />
+            {isPremium ? (
+              <UnitStatusChartServer hotelId={userHotel.id} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>الرسم البياني متاح فقط للأعضاء المميزين</p>
+                <p className="text-sm mt-2">الرجاء ترقية الحساب للوصول إلى تقارير متقدمة</p>
+              </div>
+            )}
           </div>
 
-          {/* Reservation Sources */}
+          {/* Reservation Sources - Available to all users */}
           <div className="bg-card rounded-2xl border border-border p-6">
             <h3 className="text-lg font-semibold text-foreground mb-4">مصادر الحجوزات</h3>
-            <ReservationSourcesChart hotelId={userHotel.id} />
+            {isPremium ? (
+              <ReservationSourcesChart hotelId={userHotel.id} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>الرسم البياني متاح فقط للأعضاء المميزين</p>
+                <p className="text-sm mt-2">الرجاء ترقية الحساب للوصول إلى تقارير متقدمة</p>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Unit Status Grid */}
+        {/* Unit Status Grid - Available to all users */}
         <div className="bg-card rounded-2xl border border-border p-6">
           <h3 className="text-lg font-semibold text-foreground mb-4">حالة الوحدات</h3>
           <UnitStatusList units={units} />
         </div>
+
+        {/* Premium Upgrade Banner for non-premium users */}
+        {!isPremium && (
+          <div className="mt-8 p-4 bg-gradient-to-r from-primary to-primary/80 rounded-2xl text-white">
+            <div className="flex flex-col md:flex-row items-center justify-between">
+              <div className="mb-4 md:mb-0">
+                <h3 className="text-lg font-semibold">الحصول على الإصدار المميز</h3>
+                <p className="text-sm opacity-90">الوصول إلى تقارير متقدمة وأدوات تحليل مفصلة</p>
+              </div>
+              <a
+                href="/dashboard/upgrade"
+                className="px-4 py-2 bg-white text-primary rounded-lg font-medium hover:bg-gray-100 transition-colors"
+              >
+                ترقية الحساب الآن
+              </a>
+            </div>
+          </div>
+        )}
       </MainLayout>
   )
 }

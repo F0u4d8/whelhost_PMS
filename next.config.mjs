@@ -7,9 +7,7 @@ const nextConfig = {
     unoptimized: true,
   },
   productionBrowserSourceMaps: false, // Disable source maps in production to avoid parsing issues
-  experimental: {
-    serverComponentsExternalPackages: ["@supabase/supabase-js"],
-  },
+  serverExternalPackages: ["@supabase/supabase-js"],
   async headers() {
     return [
       {

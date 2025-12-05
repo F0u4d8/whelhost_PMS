@@ -13,6 +13,7 @@ import { Invoice, addInvoice as addInvoiceAction } from "@/lib/invoices-server-a
 import { deleteInvoice as deleteInvoiceAction } from "@/lib/invoices-server-actions";
 import { AddInvoiceModal } from "@/components/modals/add-invoice-modal";
 import { ViewInvoiceModal } from "@/components/modals/view-invoice-modal";
+import { AddReceiptModal } from "@/components/modals/add-receipt-modal";
 import { Toaster, toast } from "sonner";
 
 interface InvoicesClientProps {
@@ -29,7 +30,9 @@ export default function InvoicesClient({ initialInvoices }: InvoicesClientProps)
   const [invoices, setInvoices] = useState<Invoice[]>(initialInvoices);
   const [addModalOpen, setAddModalOpen] = useState(false);
   const [viewModalOpen, setViewModalOpen] = useState(false);
+  const [addReceiptModalOpen, setAddReceiptModalOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [selectedInvoiceForReceipt, setSelectedInvoiceForReceipt] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -62,7 +65,13 @@ export default function InvoicesClient({ initialInvoices }: InvoicesClientProps)
 
   const handleAddInvoice = async (invoiceData: Omit<Invoice, 'id' | 'createdAt'>) => {
     try {
-      const newInvoice = await addInvoiceAction(invoiceData);
+      // Ensure the date is properly formatted
+      const formattedInvoiceData = {
+        ...invoiceData,
+        date: invoiceData.date || new Date().toISOString().split('T')[0],
+      };
+
+      const newInvoice = await addInvoiceAction(formattedInvoiceData);
 
       setInvoices([...invoices, newInvoice]);
       setAddModalOpen(false);
@@ -70,6 +79,36 @@ export default function InvoicesClient({ initialInvoices }: InvoicesClientProps)
     } catch (error) {
       console.error("Error adding invoice:", error);
       toast.error("حدث خطأ أثناء إنشاء الفاتورة");
+    }
+  };
+
+  const handleAddReceiptForInvoice = async (invoice: Invoice) => {
+    // Set up default receipt data based on the invoice
+    const receiptData = {
+      type: "income" as const,
+      amount: invoice.total,
+      method: "نقدي", // Default payment method
+      reservationNumber: invoice.contractNumber,
+      notes: `سند قبض لفاتورة ${invoice.id}`,
+    };
+
+    setSelectedInvoiceForReceipt(receiptData);
+    setAddReceiptModalOpen(true);
+  };
+
+  const handleAddReceiptFromInvoice = async (receiptData: any) => {
+    try {
+      // We need to import the receipt functions dynamically
+      const { addReceipt } = await import("@/lib/receipts-server-actions");
+      // Use the receiptData that's passed from the modal, not the selectedInvoiceForReceipt
+      const newReceipt = await addReceipt(receiptData);
+
+      toast.success("تم إنشاء السند بنجاح");
+      setAddReceiptModalOpen(false);
+      setSelectedInvoiceForReceipt(null);
+    } catch (error) {
+      console.error("Error adding receipt from invoice:", error);
+      toast.error("حدث خطأ أثناء إنشاء السند");
     }
   };
 
@@ -187,7 +226,24 @@ export default function InvoicesClient({ initialInvoices }: InvoicesClientProps)
         onOpenChange={setAddModalOpen}
         onAddInvoice={handleAddInvoice}
       />
-      <ViewInvoiceModal open={viewModalOpen} onOpenChange={setViewModalOpen} invoice={selectedInvoice} />
+      <ViewInvoiceModal
+        open={viewModalOpen}
+        onOpenChange={setViewModalOpen}
+        invoice={selectedInvoice}
+        onAddReceiptForInvoice={selectedInvoice ? handleAddReceiptForInvoice : undefined}
+      />
+
+      {addReceiptModalOpen && selectedInvoiceForReceipt && (
+        <AddReceiptModal
+          open={addReceiptModalOpen}
+          onOpenChange={(open) => {
+            setAddReceiptModalOpen(open);
+            if (!open) setSelectedInvoiceForReceipt(null);
+          }}
+          onAddReceipt={handleAddReceiptFromInvoice}
+          defaultValues={selectedInvoiceForReceipt}
+        />
+      )}
     </MainLayout>
   );
 }
