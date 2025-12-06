@@ -1,6 +1,6 @@
 "use server";
 
-import { createClient } from "@/lib/supabase/server";
+import { createClientSafe as createClient } from "@/lib/supabase/server";
 import { requireAuth } from "@/lib/auth";
 import { Unit } from "@/lib/store";
 import { fakeUnits } from "@/lib/fake-units-data";

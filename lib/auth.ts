@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClientSafe as createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 
 export async function requireAuth() {
