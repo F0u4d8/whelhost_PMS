@@ -13,16 +13,18 @@ export const fakeUnits = [
     type: "suite" as const,
     floor: "1",
     pricePerNight: 500,
+    city: "الرياض",
     propertyId: "1",
   },
   {
-    id: "unit-2", 
+    id: "unit-2",
     number: "102",
     name: "غرفة عادية",
     status: "vacant" as const,
     type: "room" as const,
     floor: "1",
     pricePerNight: 300,
+    city: "الرياض",
     propertyId: "1",
   },
   {
@@ -37,6 +39,7 @@ export const fakeUnits = [
     type: "suite" as const,
     floor: "1",
     pricePerNight: 800,
+    city: "الرياض",
     propertyId: "1",
   },
   {
@@ -51,6 +54,7 @@ export const fakeUnits = [
     type: "room" as const,
     floor: "1",
     pricePerNight: 400,
+    city: "الرياض",
     propertyId: "1",
   },
   {
@@ -61,6 +65,7 @@ export const fakeUnits = [
     type: "studio" as const,
     floor: "1",
     pricePerNight: 350,
+    city: "الرياض",
     propertyId: "1",
   },
   {
@@ -75,6 +80,7 @@ export const fakeUnits = [
     type: "suite" as const,
     floor: "2",
     pricePerNight: 600,
+    city: "الرياض",
     propertyId: "1",
   },
   {
@@ -85,6 +91,7 @@ export const fakeUnits = [
     type: "room" as const,
     floor: "2",
     pricePerNight: 250,
+    city: "الرياض",
     propertyId: "1",
   },
   {
@@ -99,6 +106,7 @@ export const fakeUnits = [
     type: "suite" as const,
     floor: "2",
     pricePerNight: 700,
+    city: "الرياض",
     propertyId: "1",
   }
 ];

@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, User, Calendar, Banknote, Trash2, Edit } from "lucide-react"
+import { MoreHorizontal, User, Calendar, Banknote, Trash2, Edit, Image } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { UnitStatusModal } from "@/components/modals/unit-status-modal"
+import { EditUnitModal } from "@/components/modals/edit-unit-modal"
 import { usePMSStore, type Unit } from "@/lib/store"
 import { toast } from "sonner"
 
@@ -50,6 +51,7 @@ const statusConfig = {
 export function UnitCard({ unit }: UnitCardProps) {
   const config = statusConfig[unit.status]
   const [statusModalOpen, setStatusModalOpen] = useState(false)
+  const [editModalOpen, setEditModalOpen] = useState(false)
   const deleteUnit = usePMSStore((state) => state.deleteUnit)
 
   const handleDelete = () => {
@@ -79,7 +81,10 @@ export function UnitCard({ unit }: UnitCardProps) {
                   <Edit className="h-4 w-4 ml-2" />
                   تغيير الحالة
                 </DropdownMenuItem>
-                <DropdownMenuItem>عرض التفاصيل</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setEditModalOpen(true)}>
+                  <Edit className="h-4 w-4 ml-2" />
+                  تعديل الوحدة
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                   <Trash2 className="h-4 w-4 ml-2" />
@@ -89,6 +94,30 @@ export function UnitCard({ unit }: UnitCardProps) {
             </DropdownMenu>
           </div>
         </div>
+
+        {/* Unit Images */}
+        {unit.imageUrls && unit.imageUrls.length > 0 && (
+          <div className="mb-4">
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {unit.imageUrls.slice(0, 3).map((url, index) => (
+                <div key={index} className="flex-shrink-0 relative w-20 h-20">
+                  <img
+                    src={url}
+                    alt={`Unit ${unit.number} image ${index + 1}`}
+                    className="w-full h-full object-cover rounded-lg"
+                  />
+                </div>
+              ))}
+              {unit.imageUrls.length > 3 && (
+                <div className="flex-shrink-0 flex items-center justify-center w-20 h-20 bg-muted rounded-lg border border-dashed">
+                  <span className="text-xs text-muted-foreground text-center px-1">
+                    +{unit.imageUrls.length - 3}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* Guest Info */}
         {unit.guest && (
@@ -130,6 +159,7 @@ export function UnitCard({ unit }: UnitCardProps) {
       </div>
 
       <UnitStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} unit={unit} />
+      <EditUnitModal open={editModalOpen} onOpenChange={setEditModalOpen} unit={unit} />
     </>
   )
 }

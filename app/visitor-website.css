@@ -1,0 +1,79 @@
+/* Specific styles for the visitor-facing website to use the requested color scheme */
+/* Applied only to homepage and related public pages */
+
+.visitor-website {
+  /* Color palette: #1E2228 (dark), #EBEAE6 (light), #494C4F (medium gray) */
+  --background: 30 34 40; /* #1E2228 - dark background */
+  --foreground: 235 234 230; /* #EBEAE6 - light text */
+  --card: 235 234 230; /* #EBEAE6 - light cards */
+  --card-foreground: 30 34 40; /* #1E2228 - dark card text */
+  --popover: 235 234 230; /* #EBEAE6 - light popovers */
+  --popover-foreground: 30 34 40; /* #1E2228 - dark popover text */
+  --primary: 73 76 79; /* #494C4F - medium gray primary */
+  --primary-foreground: 235 234 230; /* #EBEAE6 - light primary text */
+  --secondary: 73 76 79; /* #494C4F - medium gray secondary */
+  --secondary-foreground: 235 234 230; /* #EBEAE6 - light secondary text */
+  --muted: 73 76 79; /* #494C4F - medium gray muted */
+  --muted-foreground: 235 234 230; /* #EBEAE6 - light muted text */
+  --accent: 73 76 79; /* #494C4F - medium gray accent */
+  --accent-foreground: 235 234 230; /* #EBEAE6 - light accent text */
+  --destructive: 220 38 38; /* Red for destructive actions */
+  --destructive-foreground: 235 234 230; /* #EBEAE6 - light destructive text */
+  --border: 73 76 79; /* #494C4F - medium gray borders */
+  --input: 73 76 79; /* #494C4F - medium gray inputs */
+  --ring: 73 76 79; /* #494C4F - medium gray ring */
+  --success: 34 197 94; /* Green for success */
+  --warning: 234 179 8; /* Amber for warning */
+  --glass: 235 234 230 / 0.8; /* #EBEAE6 with transparency */
+}
+
+.visitor-website.dark {
+  /* Inverted color scheme for dark mode on visitor website */
+  --background: 235 234 230; /* #EBEAE6 - light background */
+  --foreground: 30 34 40; /* #1E2228 - dark text */
+  --card: 30 34 40; /* #1E2228 - dark cards */
+  --card-foreground: 235 234 230; /* #EBEAE6 - light card text */
+  --popover: 30 34 40; /* #1E2228 - dark popovers */
+  --popover-foreground: 235 234 230; /* #EBEAE6 - light popover text */
+  --primary: 73 76 79; /* #494C4F - medium gray primary */
+  --primary-foreground: 235 234 230; /* #EBEAE6 - light primary text */
+  --secondary: 73 76 79; /* #494C4F - medium gray secondary */
+  --secondary-foreground: 235 234 230; /* #EBEAE6 - light secondary text */
+  --muted: 73 76 79; /* #494C4F - medium gray muted */
+  --muted-foreground: 235 234 230; /* #EBEAE6 - light muted text */
+  --accent: 73 76 79; /* #494C4F - medium gray accent */
+  --accent-foreground: 235 234 230; /* #EBEAE6 - light accent text */
+  --destructive: 220 38 38; /* Red for destructive actions */
+  --destructive-foreground: 235 234 230; /* #EBEAE6 - light destructive text */
+  --border: 73 76 79; /* #494C4F - medium gray borders */
+  --input: 73 76 79; /* #494C4F - medium gray inputs */
+  --ring: 73 76 79; /* #494C4F - medium gray ring */
+  --success: 34 197 94; /* Green for success */
+  --warning: 234 179 8; /* Amber for warning */
+  --glass: 30 34 40 / 0.8; /* #1E2228 with transparency */
+}
+
+/* Apply the visitor website theme only to the main content of visitor pages */
+.visitor-website body {
+  background-color: rgb(var(--background));
+  color: rgb(var(--foreground));
+}
+
+.visitor-website .bg-background { background-color: rgb(var(--background)) !important; }
+.visitor-website .text-foreground { color: rgb(var(--foreground)) !important; }
+.visitor-website .bg-card { background-color: rgb(var(--card)) !important; }
+.visitor-website .text-card-foreground { color: rgb(var(--card-foreground)) !important; }
+.visitor-website .bg-popover { background-color: rgb(var(--popover)) !important; }
+.visitor-website .text-popover-foreground { color: rgb(var(--popover-foreground)) !important; }
+.visitor-website .bg-primary { background-color: rgb(var(--primary)) !important; }
+.visitor-website .text-primary-foreground { color: rgb(var(--primary-foreground)) !important; }
+.visitor-website .bg-secondary { background-color: rgb(var(--secondary)) !important; }
+.visitor-website .text-secondary-foreground { color: rgb(var(--secondary-foreground)) !important; }
+.visitor-website .bg-muted { background-color: rgb(var(--muted)) !important; }
+.visitor-website .text-muted-foreground { color: rgb(var(--muted-foreground)) !important; }
+.visitor-website .bg-accent { background-color: rgb(var(--accent)) !important; }
+.visitor-website .text-accent-foreground { color: rgb(var(--accent-foreground)) !important; }
+.visitor-website .border-border { border-color: rgb(var(--border)) !important; }
+.visitor-website .text-destructive { color: rgb(var(--destructive)) !important; }
+.visitor-website .text-destructive-foreground { color: rgb(var(--destructive-foreground)) !important; }
+.visitor-website .ring-ring { box-shadow: 0 0 0 1px rgb(var(--ring)) !important; }

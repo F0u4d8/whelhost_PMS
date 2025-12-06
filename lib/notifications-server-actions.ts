@@ -41,16 +41,15 @@ export async function getNotifications(): Promise<Notification[]> {
       title,
       message,
       type,
-      read,
-      created_at,
-      action_url
+      is_read,
+      created_at
     `)
     .in("hotel_id", hotelIds)
     .order("created_at", { ascending: false });
 
   if (notificationsError) {
     console.warn("Error fetching notifications with full schema:", notificationsError.message);
-    
+
     // Fallback: If no notifications table exists, we'll simulate notifications based on recent activity
     try {
       // Check if notifications table exists
@@ -61,10 +60,10 @@ export async function getNotifications(): Promise<Notification[]> {
 
       if (tableCheckError && tableCheckError.message.includes("does not exist")) {
         console.warn("Notifications table does not exist, creating simulated notifications");
-        
+
         // Create simulated notifications based on recent activity
         const simulatedNotifications: Notification[] = [];
-        
+
         // Get recent messages
         const { data: recentMessages, error: messagesError } = await supabase
           .from("messages")
@@ -73,7 +72,7 @@ export async function getNotifications(): Promise<Notification[]> {
           .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
           .order("created_at", { ascending: false })
           .limit(5);
-        
+
         if (!messagesError && recentMessages) {
           for (const message of recentMessages) {
             const { data: channelData } = await supabase
@@ -81,7 +80,7 @@ export async function getNotifications(): Promise<Notification[]> {
               .select("name")
               .eq("id", message.channel_id)
               .single();
-            
+
             simulatedNotifications.push({
               id: `msg_${message.id}`,
               title: "رسالة جديدة",
@@ -93,7 +92,7 @@ export async function getNotifications(): Promise<Notification[]> {
             });
           }
         }
-        
+
         // Get recent bookings
         const { data: recentBookings, error: bookingsError } = await supabase
           .from("bookings")
@@ -102,7 +101,7 @@ export async function getNotifications(): Promise<Notification[]> {
           .gte("created_at", new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()) // Last 7 days
           .order("created_at", { ascending: false })
           .limit(5);
-        
+
         if (!bookingsError && recentBookings) {
           for (const booking of recentBookings) {
             // Get guest name
@@ -113,12 +112,12 @@ export async function getNotifications(): Promise<Notification[]> {
                 .select("first_name, last_name")
                 .eq("id", booking.guest_id)
                 .single();
-              
+
               if (guestData) {
                 guestName = `${guestData.first_name} ${guestData.last_name}`.trim() || "ضيف";
               }
             }
-            
+
             simulatedNotifications.push({
               id: `booking_${booking.id}`,
               title: "حجز جديد",
@@ -130,7 +129,7 @@ export async function getNotifications(): Promise<Notification[]> {
             });
           }
         }
-        
+
         return simulatedNotifications;
       } else {
         // If it's a different error, return an empty array
@@ -148,9 +147,9 @@ export async function getNotifications(): Promise<Notification[]> {
       title: item.title || "إشعار",
       message: item.message || "لديك إشعار جديد",
       type: item.type || "info",
-      read: item.read || false,
+      read: item.is_read || false,
       createdAt: item.created_at || new Date().toISOString(),
-      actionUrl: item.action_url || undefined,
+      actionUrl: undefined,
     }));
   }
 
@@ -177,7 +176,7 @@ export async function markNotificationAsRead(id: string): Promise<Notification> 
     // Update the notification as read
     const { data, error } = await supabase
       .from("notifications")
-      .update({ read: true })
+      .update({ is_read: true })
       .eq("id", id)
       .in("hotel_id", hotelIds)
       .select(`
@@ -185,9 +184,8 @@ export async function markNotificationAsRead(id: string): Promise<Notification> 
         title,
         message,
         type,
-        read,
-        created_at,
-        action_url
+        is_read,
+        created_at
       `)
       .single();
 
@@ -202,9 +200,9 @@ export async function markNotificationAsRead(id: string): Promise<Notification> 
       title: data.title || "إشعار",
       message: data.message || "لديك إشعار جديد",
       type: data.type || "info",
-      read: data.read || true,
+      read: data.is_read || true,
       createdAt: data.created_at || new Date().toISOString(),
-      actionUrl: data.action_url || undefined,
+      actionUrl: undefined,
     };
   } catch (error) {
     console.error("Error marking notification as read:", error);
@@ -232,7 +230,7 @@ export async function markAllNotificationsAsRead(): Promise<void> {
     // Update all notifications as read for the user's hotels
     const { error } = await supabase
       .from("notifications")
-      .update({ read: true })
+      .update({ is_read: true })
       .in("hotel_id", hotelIds);
 
     if (error) {
@@ -277,16 +275,15 @@ export async function createNotification(
         title,
         message,
         type,
-        action_url: actionUrl || null,
+        data: actionUrl ? { action_url: actionUrl } : {}
       }])
       .select(`
         id,
         title,
         message,
         type,
-        read,
-        created_at,
-        action_url
+        is_read,
+        created_at
       `)
       .single();
 
@@ -301,9 +298,9 @@ export async function createNotification(
       title: data.title || "إشعار",
       message: data.message || "لديك إشعار جديد",
       type: data.type || "info",
-      read: data.read || false,
+      read: data.is_read || false,
       createdAt: data.created_at || new Date().toISOString(),
-      actionUrl: data.action_url || undefined,
+      actionUrl: actionUrl,
     };
   } catch (error) {
     console.error("Error creating notification:", error);

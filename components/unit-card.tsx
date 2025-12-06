@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { MoreHorizontal, User, Calendar, Banknote, Trash2, Edit } from "lucide-react"
+import { MoreHorizontal, User, Calendar, Banknote, Trash2, Edit, Eye } from "lucide-react"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu"
 import { UnitStatusModal } from "@/components/modals/unit-status-modal"
+import { UnitDetailsModal } from "@/components/unit-details-modal"
 import { usePMSStore, type Unit } from "@/lib/store"
 import { toast } from "sonner"
 
@@ -52,6 +53,7 @@ const statusConfig = {
 export function UnitCard({ unit, onEdit, onDelete }: UnitCardProps) {
   const config = statusConfig[unit.status] || statusConfig.vacant // fallback to vacant config if status is invalid
   const [statusModalOpen, setStatusModalOpen] = useState(false)
+  const [detailsModalOpen, setDetailsModalOpen] = useState(false)
 
   const handleDelete = () => {
     if (onDelete) {
@@ -81,7 +83,14 @@ export function UnitCard({ unit, onEdit, onDelete }: UnitCardProps) {
                   <Edit className="h-4 w-4 ml-2" />
                   تعديل
                 </DropdownMenuItem>
-                <DropdownMenuItem>عرض التفاصيل</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setDetailsModalOpen(true)}>
+                  <Eye className="h-4 w-4 ml-2" />
+                  عرض التفاصيل
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusModalOpen(true)}>
+                  <Calendar className="h-4 w-4 ml-2" />
+                  تغيير الحالة
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={handleDelete} className="text-destructive">
                   <Trash2 className="h-4 w-4 ml-2" />
@@ -125,13 +134,14 @@ export function UnitCard({ unit, onEdit, onDelete }: UnitCardProps) {
           variant="outline"
           className="w-full rounded-xl bg-transparent"
           size="sm"
-          onClick={() => setStatusModalOpen(true)}
+          onClick={() => setDetailsModalOpen(true)}
         >
-          تغيير الحالة
+          عرض التفاصيل
         </Button>
       </div>
 
       <UnitStatusModal open={statusModalOpen} onOpenChange={setStatusModalOpen} unit={unit} />
+      <UnitDetailsModal unit={unit} open={detailsModalOpen} onOpenChange={setDetailsModalOpen} />
     </>
   )
 }

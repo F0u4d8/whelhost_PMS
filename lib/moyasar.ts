@@ -150,22 +150,26 @@ export async function createPayment(paymentData: PaymentRequest): Promise<Paymen
     throw new Error(`Invalid payment amount: ${paymentData.amount}. Amount must be between 1 SAR and 100,000 SAR`);
   }
 
-  // Validate source-specific data
+  // Validate source-specific data (only for direct input methods, not for redirect methods)
   if (paymentData.source.type === 'creditcard') {
     const cardSource = paymentData.source as CreditCardSource;
-    if (!validateCardNumber(cardSource.number)) {
-      throw new Error('Invalid card number provided');
-    }
-    if (!validateExpiryDate(cardSource.month.toString(), cardSource.year.toString())) {
-      throw new Error('Invalid card expiry date provided');
-    }
-    if (!validateCVC(cardSource.cvc)) {
-      throw new Error('Invalid CVC provided');
+    // For redirect-based credit card payments, card details may not be provided initially
+    // Only validate if card details are provided
+    if (cardSource.number) {
+      if (!validateCardNumber(cardSource.number)) {
+        throw new Error('Invalid card number provided');
+      }
+      if (!validateExpiryDate(cardSource.month?.toString(), cardSource.year?.toString())) {
+        throw new Error('Invalid card expiry date provided');
+      }
+      if (!cardSource.cvc || !validateCVC(cardSource.cvc)) {
+        throw new Error('Invalid CVC provided');
+      }
     }
   } else if (paymentData.source.type === 'stcpay') {
     const stcSource = paymentData.source as STCPaySource;
-    // Validate STC Pay phone number
-    if (!/^9665\d{8}$/.test(stcSource.phone)) {
+    // For redirect-based STC Pay, phone number is not required initially
+    if (stcSource.phone && !/^9665\d{8}$/.test(stcSource.phone)) {
       throw new Error('Invalid STC Pay phone number. Expected format: 9665XXXXXXXX');
     }
   }
@@ -183,15 +187,17 @@ export async function createPayment(paymentData: PaymentRequest): Promise<Paymen
       currency: paymentData.currency,
       source: {
         type: paymentData.source.type,
-        // Conditionally include only relevant fields based on source type
-        ...(paymentData.source.type === 'creditcard' && {
+        // Conditionally include only relevant fields based on source type if provided
+        ...(paymentData.source.type === 'creditcard' &&
+          (paymentData.source as CreditCardSource).number && {
           number: (paymentData.source as CreditCardSource).number,
           cvc: (paymentData.source as CreditCardSource).cvc,
           month: (paymentData.source as CreditCardSource).month,
           year: (paymentData.source as CreditCardSource).year,
           holder_name: (paymentData.source as CreditCardSource).holder_name,
         }),
-        ...(paymentData.source.type === 'stcpay' && {
+        ...(paymentData.source.type === 'stcpay' &&
+          (paymentData.source as STCPaySource).phone && {
           phone: (paymentData.source as STCPaySource).phone,
         }),
       },

@@ -34,7 +34,7 @@ export function ReservationSourcesChartClient({ data }: ReservationSourcesChartP
           }}
           formatter={(value: number) => [`${value} حجز`, "عدد الحجوزات"]}
         />
-        <Bar dataKey="reservations" fill="var(--chart-2)" radius={[0, 6, 6, 0]} />
+        <Bar dataKey="reservations" fill="#10B981" radius={[0, 6, 6, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

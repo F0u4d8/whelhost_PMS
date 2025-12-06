@@ -202,7 +202,7 @@ export default function ReportsServer({ reportData }: { reportData: ReportData }
                     }}
                   />
                   <Legend />
-                  <Bar dataKey="revenue" name="الإيرادات" fill="#14b8a6" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="revenue" name="الإيرادات" fill="#10B981" radius={[4, 4, 0, 0]} />
                   <Bar dataKey="expenses" name="المصروفات" fill="#f43f5e" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -269,9 +269,9 @@ export default function ReportsServer({ reportData }: { reportData: ReportData }
                     type="monotone"
                     dataKey="rate"
                     name="نسبة الإشغال %"
-                    stroke="#14b8a6"
+                    stroke="#10B981"
                     strokeWidth={3}
-                    dot={{ fill: "#14b8a6", strokeWidth: 2 }}
+                    dot={{ fill: "#10B981", strokeWidth: 2 }}
                   />
                 </LineChart>
               </ResponsiveContainer>

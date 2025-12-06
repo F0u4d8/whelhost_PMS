@@ -1,146 +1,134 @@
-import { createClient } from "@/lib/supabase/server"
-import { verifyPayment, PLANS, type PlanId } from "@/lib/moyasar"
-import { redirect } from "next/navigation"
-import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { CheckCircle2, XCircle, ArrowRight } from "lucide-react"
+"use client";
 
-interface CallbackPageProps {
-  searchParams: Promise<{
-    id?: string
-    status?: string
-    message?: string
-  }>
-}
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CheckCircle2, XCircle, Loader2, CreditCard } from "lucide-react";
+import Link from "next/link";
 
-export default async function PaymentCallbackPage({ searchParams }: CallbackPageProps) {
-  const params = await searchParams
-  const paymentId = params.id
-  const status = params.status
+export default function CheckoutCallbackPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const [status, setStatus] = useState<"loading" | "success" | "failed" | "unknown">("loading");
+  const [paymentInfo, setPaymentInfo] = useState<{ id?: string; amount?: number; currency?: string }>({});
 
-  if (!paymentId) {
-    redirect("/dashboard/upgrade")
-  }
+  useEffect(() => {
+    const paymentId = searchParams.get("id");
+    const paymentStatus = searchParams.get("status");
+    const amount = searchParams.get("amount");
+    const currency = searchParams.get("currency");
 
-  // Verify the payment with Moyasar
-  const payment = await verifyPayment(paymentId)
-
-  if (!payment) {
-    return <PaymentError message="Unable to verify payment. Please contact support." />
-  }
-
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    redirect("/login")
-  }
-
-  // Check if payment was successful
-  if (payment.status === "paid") {
-    const planId = payment.metadata?.plan_id as PlanId
-    const plan = planId && PLANS[planId]
-
-    if (!plan) {
-      return <PaymentError message="Invalid subscription plan. Please contact support." />
-    }
-
-    // Calculate premium expiration date
-    const now = new Date()
-    const expiresAt = new Date(now)
-    if (planId === "monthly") {
-      expiresAt.setMonth(expiresAt.getMonth() + 1)
+    // Determine status based on URL parameters
+    if (paymentStatus === "success" || paymentStatus === "completed") {
+      setStatus("success");
+      setPaymentInfo({
+        id: paymentId || undefined,
+        amount: amount ? parseFloat(amount) : undefined,
+        currency: currency || "SAR"
+      });
+    } else if (paymentStatus === "failed" || paymentStatus === "error") {
+      setStatus("failed");
+      setPaymentInfo({ id: paymentId || undefined });
     } else {
-      expiresAt.setFullYear(expiresAt.getFullYear() + 1)
+      // If no status parameter, check if there are other payment parameters
+      if (paymentId) {
+        // For Moyasar, they typically redirect with the status in the URL
+        // Let's try to determine the status based on presence of the payment ID
+        setStatus("unknown");
+        setPaymentInfo({ id: paymentId });
+      }
     }
+  }, [searchParams]);
 
-    // Update user profile to premium
-    const { error: updateError } = await supabase
-      .from("profiles")
-      .update({
-        is_premium: true,
-        premium_expires_at: expiresAt.toISOString(),
-      })
-      .eq("id", user.id)
-
-    if (updateError) {
-      console.error("Failed to update premium status:", updateError)
-      return <PaymentError message="Payment successful but failed to activate premium. Please contact support." />
+  const getStatusContent = () => {
+    switch (status) {
+      case "success":
+        return {
+          icon: <CheckCircle2 className="h-16 w-16 text-green-500" />,
+          title: "الدفع ناجح!",
+          message: `تمت عملية الدفع ${paymentInfo.amount ? `بقيمة ${paymentInfo.amount} ${paymentInfo.currency || "SAR"}` : ""} بنجاح.`,
+          button: (
+            <Link href="/dashboard" className="w-full">
+              <Button className="w-full bg-amber-500 hover:bg-amber-600 text-[#1E2228]">
+                الذهاب إلى لوحة التحكم
+              </Button>
+            </Link>
+          )
+        };
+      case "failed":
+        return {
+          icon: <XCircle className="h-16 w-16 text-red-500" />,
+          title: "فشلت عملية الدفع",
+          message: paymentInfo.id 
+            ? `فشلت عملية الدفع مع المعرف: ${paymentInfo.id}` 
+            : "فشلت عملية الدفع. يرجى المحاولة مرة أخرى.",
+          button: (
+            <Link href="/checkout" className="w-full">
+              <Button variant="outline" className="w-full border-[#494C4F] text-[#EBEAE6]">
+                المحاولة مرة أخرى
+              </Button>
+            </Link>
+          )
+        };
+      case "unknown":
+        return {
+          icon: <CreditCard className="h-16 w-16 text-amber-500" />,
+          title: "جاري التحقق من حالة الدفع",
+          message: "نقوم بالتحقق من حالة عملية الدفع الخاصة بك...",
+          button: (
+            <Link href="/dashboard" className="w-full">
+              <Button className="w-full bg-amber-500 hover:bg-amber-600 text-[#1E2228]">
+                الذهاب إلى لوحة التحكم
+              </Button>
+            </Link>
+          )
+        };
+      default:
+        return {
+          icon: <Loader2 className="h-16 w-16 text-amber-500 animate-spin" />,
+          title: "جاري معالجة الدفع...",
+          message: "الرجاء الانتظار بينما نقوم بمعالجة عملية الدفع الخاصة بك.",
+          button: null
+        };
     }
+  };
 
-    // Record the subscription
-    await supabase.from("subscriptions").insert({
-      user_id: user.id,
-      plan: planId,
-      status: "active",
-      current_period_start: now.toISOString(),
-      current_period_end: expiresAt.toISOString(),
-      moyasar_payment_id: paymentId,
-    })
+  const content = getStatusContent();
 
-    // Record the payment
-    await supabase.from("payments").insert({
-      user_id: user.id,
-      amount: payment.amount / 100, // Convert from halalas to SAR
-      currency: payment.currency,
-      status: "completed",
-      payment_method: "moyasar",
-      moyasar_payment_id: paymentId,
-    })
-
-    return <PaymentSuccess planName={plan.name} />
-  }
-
-  // Payment failed
-  return <PaymentError message={params.message || "Payment was not completed. Please try again."} />
-}
-
-function PaymentSuccess({ planName }: { planName: string }) {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-success/10">
-          <CheckCircle2 className="h-10 w-10 text-success" />
-        </div>
-
-        <h1 className="font-serif text-3xl font-medium">Payment Successful</h1>
-        <p className="mt-4 text-muted-foreground">
-          Thank you for subscribing to {planName}. Your premium features are now active.
-        </p>
-
-        <Button asChild className="mt-8 gap-2 rounded-none px-8">
-          <Link href="/dashboard">
-            Go to Dashboard
-            <ArrowRight className="h-4 w-4" />
-          </Link>
-        </Button>
+    <div className="min-h-screen bg-[#1E2228] flex items-center justify-center p-4">
+      <div className="w-full max-w-md">
+        <Card className="border-[#494C4F] bg-[#1E2228]">
+          <CardHeader className="text-center">
+            <div className="flex justify-center mb-4">
+              {content.icon}
+            </div>
+            <CardTitle className="text-[#EBEAE6] text-2xl">{content.title}</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <p className="text-center text-[#494C4F]">
+              {content.message}
+            </p>
+            
+            {status === "loading" && (
+              <div className="flex justify-center">
+                <Loader2 className="h-8 w-8 text-amber-500 animate-spin" />
+              </div>
+            )}
+            
+            {content.button && (
+              <div className="pt-4">
+                {content.button}
+              </div>
+            )}
+            
+            <div className="text-center text-sm text-[#494C4F]">
+              <p>مدعوم من Moyasar</p>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
-  )
-}
-
-function PaymentError({ message }: { message: string }) {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-6">
-      <div className="w-full max-w-md text-center">
-        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
-          <XCircle className="h-10 w-10 text-destructive" />
-        </div>
-
-        <h1 className="font-serif text-3xl font-medium">Payment Failed</h1>
-        <p className="mt-4 text-muted-foreground">{message}</p>
-
-        <div className="mt-8 flex flex-col gap-4">
-          <Button asChild className="gap-2 rounded-none">
-            <Link href="/dashboard/upgrade">Try Again</Link>
-          </Button>
-          <Button variant="outline" asChild className="rounded-none bg-transparent">
-            <Link href="mailto:support@whelhost.com">Contact Support</Link>
-          </Button>
-        </div>
-      </div>
-    </div>
-  )
+  );
 }

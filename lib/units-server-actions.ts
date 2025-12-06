@@ -12,7 +12,9 @@ export interface UnitFormData {
   floor: string;
   pricePerNight: number;
   status: "occupied" | "vacant" | "out-of-service" | "departure-today" | "arrival-today";
+  city?: string;
   propertyId?: string;
+  imageUrls?: string[];
 }
 
 export async function getUnits(): Promise<Unit[]> {
@@ -36,7 +38,7 @@ export async function getUnits(): Promise<Unit[]> {
   // First try to get with all expected columns, if that fails, use basic columns
   const { data, error: fullError } = await supabase
     .from("units")
-    .select("id, name, status, base_price as pricePerNight, floor")
+    .select("id, name, status, base_price as pricePerNight, floor, image_urls")
     .in("hotel_id", hotelIds);
 
   if (fullError) {
@@ -45,7 +47,7 @@ export async function getUnits(): Promise<Unit[]> {
     // Fallback to basic columns only
     const { data: basicData, error: basicError } = await supabase
       .from("units")
-      .select("id, name")
+      .select("id, name, image_urls")
       .in("hotel_id", hotelIds);
 
     if (basicError) {
@@ -72,6 +74,7 @@ export async function getUnits(): Promise<Unit[]> {
       type: "room", // Default type
       floor: "1", // Default floor
       propertyId: undefined,
+      imageUrls: item.image_urls || [], // Include the image URLs from the database
       guest: undefined,
       checkIn: undefined,
       checkOut: undefined,
@@ -96,6 +99,7 @@ export async function getUnits(): Promise<Unit[]> {
     type: "room", // Default value since this field doesn't exist in the DB
     floor: item.floor?.toString() || "1", // Use the floor from DB if available
     propertyId: undefined, // Default value
+    imageUrls: item.image_urls || [], // Include the image URLs from the database
     // These fields are optional in the interface
     guest: undefined,
     checkIn: undefined,
@@ -138,6 +142,8 @@ export async function addUnit(formData: UnitFormData): Promise<Unit> {
     floor: parseInt(formData.floor) || 1, // Store floor as integer
     base_price: formData.pricePerNight,
     status: mapFormStatus(formData.status),
+    city: formData.city, // Add city to the unit
+    image_urls: formData.imageUrls || [], // Store the image URLs array
   };
 
   const { data, error } = await supabase
@@ -153,12 +159,15 @@ export async function addUnit(formData: UnitFormData): Promise<Unit> {
     const basicInsertData = {
       hotel_id: hotelId,
       name: formData.number + " - " + formData.name, // Combine number and name for storage
+      status: mapFormStatus(formData.status),
+      city: formData.city, // Include city in fallback
+      image_urls: formData.imageUrls || [], // Store the image URLs array
     };
 
     const { data: basicData, error: basicError } = await supabase
       .from("units")
       .insert([basicInsertData])
-      .select("id, name")
+      .select("id, name, status, base_price as pricePerNight, floor")
       .single();
 
     if (basicError) {
@@ -166,16 +175,23 @@ export async function addUnit(formData: UnitFormData): Promise<Unit> {
       throw new Error(`Failed to add unit: ${basicError.message}`);
     }
 
-    // Return the basic data with default values
+    // Map the response to match the Unit interface
+    // Parse the stored name back to number and name components
+    const storedName = basicData.name || "";
+    const [numberPart, ...nameParts] = storedName.split(" - ");
+    const unitNumber = numberPart || formData.number || "N/A";
+    const unitName = nameParts.join(" - ") || formData.name || "Unit";
+
     return {
       id: basicData.id,
-      number: formData.number || "N/A",
-      name: formData.name || "Unit",
-      status: mapFormStatus(formData.status) || "vacant",
-      pricePerNight: formData.pricePerNight || 0,
+      number: unitNumber,
+      name: unitName,
+      status: mapStatus(basicData.status) || "vacant",
+      pricePerNight: basicData.pricePerNight || 0,
       type: formData.type,
-      floor: formData.floor,
+      floor: basicData.floor?.toString() || formData.floor,
       propertyId: undefined, // Default value
+      imageUrls: formData.imageUrls || [],
     };
   }
 
@@ -195,6 +211,8 @@ export async function addUnit(formData: UnitFormData): Promise<Unit> {
     type: formData.type,
     floor: data.floor?.toString() || formData.floor,
     propertyId: undefined, // Default value
+    imageUrls: formData.imageUrls || [],
+    city: formData.city, // Include city in the returned data
   };
 }
 
@@ -231,6 +249,8 @@ export async function updateUnit(id: string, formData: UnitFormData): Promise<Un
     floor: parseInt(formData.floor) || 1, // Store floor as integer
     base_price: formData.pricePerNight,
     status: mapFormStatus(formData.status),
+    city: formData.city, // Add city to the update
+    image_urls: formData.imageUrls || [], // Store the updated image URLs array
   };
 
   const { data, error } = await supabase
@@ -247,6 +267,9 @@ export async function updateUnit(id: string, formData: UnitFormData): Promise<Un
     // Fallback: update only basic fields
     const basicUpdateData = {
       name: formData.number + " - " + formData.name, // Combine number and name for storage
+      status: mapFormStatus(formData.status),
+      city: formData.city, // Include city in fallback update
+      image_urls: formData.imageUrls || [], // Store the updated image URLs array
     };
 
     const { data: basicData, error: basicError } = await supabase
@@ -254,7 +277,7 @@ export async function updateUnit(id: string, formData: UnitFormData): Promise<Un
       .update(basicUpdateData)
       .eq("id", id)
       .in("hotel_id", hotelIds)
-      .select("id, name")
+      .select("id, name, status, base_price as pricePerNight, floor")
       .single();
 
     if (basicError) {
@@ -262,16 +285,23 @@ export async function updateUnit(id: string, formData: UnitFormData): Promise<Un
       throw new Error(`Failed to update unit: ${basicError.message}`);
     }
 
-    // Return the basic data with default values
+    // Map the response to match the Unit interface
+    // Parse the stored name back to number and name components
+    const storedName = basicData.name || "";
+    const [numberPart, ...nameParts] = storedName.split(" - ");
+    const unitNumber = numberPart || formData.number || "N/A";
+    const unitName = nameParts.join(" - ") || formData.name || "Unit";
+
     return {
       id: basicData.id,
-      number: formData.number || "N/A",
-      name: formData.name || "Unit",
-      status: mapFormStatus(formData.status) || "vacant",
-      pricePerNight: formData.pricePerNight || 0,
+      number: unitNumber,
+      name: unitName,
+      status: mapStatus(basicData.status) || "vacant",
+      pricePerNight: basicData.pricePerNight || 0,
       type: formData.type,
-      floor: formData.floor,
+      floor: basicData.floor?.toString() || formData.floor,
       propertyId: undefined, // Default value
+      imageUrls: formData.imageUrls || [],
     };
   }
 
@@ -291,6 +321,8 @@ export async function updateUnit(id: string, formData: UnitFormData): Promise<Un
     type: formData.type,
     floor: data.floor?.toString() || formData.floor,
     propertyId: undefined, // Default value
+    imageUrls: formData.imageUrls || [],
+    city: formData.city, // Include city in the returned data
   };
 }
 

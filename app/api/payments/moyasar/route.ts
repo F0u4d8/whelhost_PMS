@@ -31,9 +31,19 @@ export async function POST(request: NextRequest) {
       installments,
     });
 
+    // Return the payment response with relevant details
     return NextResponse.json({
       success: true,
-      payment
+      payment: {
+        id: payment.id,
+        amount: payment.amount,
+        currency: payment.currency,
+        status: payment.status,
+        url: payment.url, // This will be the redirect URL if it's a redirect payment
+        gateway_id: payment.gateway_id,
+        failure_reason: payment.failure_reason,
+        metadata: payment.metadata,
+      }
     });
   } catch (error: any) {
     console.error('Moyasar payment error:', error);

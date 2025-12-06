@@ -35,7 +35,7 @@ export function OccupancyChart({ data }: OccupancyChartProps) {
           itemStyle={{ color: "var(--primary)" }}
           formatter={(value: number) => [`${value}%`, "نسبة الإشغال"]}
         />
-        <Bar dataKey="occupancy" fill="var(--primary)" radius={[6, 6, 0, 0]} />
+        <Bar dataKey="occupancy" fill="#10B981" radius={[6, 6, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )

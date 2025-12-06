@@ -62,7 +62,7 @@ interface Payment {
   description: string;
 }
 
-const BookingDetailPage = ({ params }: { params: { bookingId: string } }) => {
+const BookingDetailPage = ({ params }: { params: { id: string } }) => {
   const [booking, setBooking] = useState<Booking | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -281,49 +281,56 @@ const BookingDetailPage = ({ params }: { params: { bookingId: string } }) => {
   useEffect(() => {
     const fetchBooking = async () => {
       try {
-        // Try the new detailed booking API first
-        const response = await fetch(`/api/bookings/${params.bookingId}`);
-        if (response.ok) {
-          const data = await response.json();
-          const bookingData = data.data;
+        try {
+          // Try the new detailed booking API first
+          const response = await fetch(`/api/bookings/${params.id}`);
+          if (response.ok) {
+            const data = await response.json();
+            const bookingData = data.data;
 
-          // Calculate nights from check-in and check-out dates
-          const checkInDate = new Date(bookingData.check_in);
-          const checkOutDate = new Date(bookingData.check_out);
-          const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
+            // Calculate nights from check-in and check-out dates
+            const checkInDate = new Date(bookingData.check_in);
+            const checkOutDate = new Date(bookingData.check_out);
+            const nights = Math.ceil((checkOutDate.getTime() - checkInDate.getTime()) / (1000 * 60 * 60 * 24));
 
-          // Create a booking object that matches our Reservation interface
-          const formattedBooking: Booking = {
-            id: bookingData.id,
-            date: bookingData.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
-            checkIn: bookingData.check_in,
-            checkOut: bookingData.check_out,
-            nights: nights,
-            unit: bookingData.unit?.name || 'Unit',
-            guest: `${bookingData.guest?.first_name || ''} ${bookingData.guest?.last_name || ''}`.trim() || 'Guest',
-            pricePerNight: bookingData.unit?.room_type?.base_price || 0,
-            total: bookingData.total_amount || 0,
-            paid: bookingData.paid_amount || 0,
-            balance: (bookingData.total_amount || 0) - (bookingData.paid_amount || 0),
-            status: bookingData.status as any,
-            channel: bookingData.source || 'direct',
-            created_at: bookingData.created_at,
-            adults: bookingData.adults || 1,
-            children: bookingData.children || 0,
-            source: bookingData.source,
-            special_requests: bookingData.special_requests,
-            notes: bookingData.notes,
-            unit: bookingData.unit,
-            guest: bookingData.guest,
-            hotel: bookingData.hotel,
-            payments: bookingData.payments
-          };
+            // Create a booking object that matches our Reservation interface
+            const formattedBooking: Booking = {
+              id: bookingData.id,
+              date: bookingData.created_at?.split('T')[0] || new Date().toISOString().split('T')[0],
+              checkIn: bookingData.check_in,
+              checkOut: bookingData.check_out,
+              nights: nights,
+              unit: bookingData.unit?.name || 'Unit',
+              guest: `${bookingData.guest?.first_name || ''} ${bookingData.guest?.last_name || ''}`.trim() || 'Guest',
+              pricePerNight: bookingData.unit?.room_type?.base_price || 0,
+              total: bookingData.total_amount || 0,
+              paid: bookingData.paid_amount || 0,
+              balance: (bookingData.total_amount || 0) - (bookingData.paid_amount || 0),
+              status: bookingData.status as any,
+              channel: bookingData.source || 'direct',
+              created_at: bookingData.created_at,
+              adults: bookingData.adults || 1,
+              children: bookingData.children || 0,
+              source: bookingData.source,
+              special_requests: bookingData.special_requests,
+              notes: bookingData.notes,
+              unit: bookingData.unit,
+              guest: bookingData.guest,
+              hotel: bookingData.hotel,
+              payments: bookingData.payments
+            };
 
-          setBooking(formattedBooking);
-          return;
-        } else {
-          // If new API fails, try the original detailed booking API
-          const v1Response = await fetch(`/api/v1/bookings/${params.bookingId}`);
+            setBooking(formattedBooking);
+            return; // early return if first API succeeds
+          }
+        } catch (err) {
+          console.error('Error with first API call:', err);
+          // Continue to try the second API if the first one fails
+        }
+
+        // If first API fails or doesn't return valid response, try the original detailed booking API
+        try {
+          const v1Response = await fetch(`/api/v1/bookings/${params.id}`);
           if (v1Response.ok) {
             const v1Data = await v1Response.json();
             const v1Booking = v1Data.data;
@@ -361,24 +368,24 @@ const BookingDetailPage = ({ params }: { params: { bookingId: string } }) => {
             };
 
             setBooking(formattedBooking);
-            return;
+            return; // early return if second API succeeds
           }
+        } catch (err) {
+          console.error('Error with second API call:', err);
         }
 
         // If both APIs fail, show error
-        throw new Error('Failed to fetch booking data from all sources');
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'حدث خطأ أثناء تحميل بيانات الحجز');
-        console.error('Error fetching booking:', err);
+        setError('Failed to fetch booking data from all sources');
+        console.error('Error fetching booking: Both API calls failed');
       } finally {
         setLoading(false);
       }
-    };
+    }
 
-    if (params.bookingId) {
+    if (params.id) {
       fetchBooking();
     }
-  }, [params.bookingId]);
+  }, [params.id]);
 
   if (loading) {
     return (

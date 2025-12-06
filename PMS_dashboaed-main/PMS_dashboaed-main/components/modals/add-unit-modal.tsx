@@ -10,6 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { usePMSStore } from "@/lib/store"
 import { toast } from "sonner"
+import { FileUpload } from "@/components/ui/file-upload"
+import { uploadMultipleImagesToStorage } from "@/lib/supabase-image-upload"
 
 interface AddUnitModalProps {
   open: boolean
@@ -26,31 +28,61 @@ export function AddUnitModal({ open, onOpenChange }: AddUnitModalProps) {
     pricePerNight: "",
     status: "vacant" as const,
   })
+  const [files, setFiles] = useState<File[]>([])
+  const [uploading, setUploading] = useState(false)
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!formData.number || !formData.name) {
       toast.error("الرجاء تعبئة جميع الحقول المطلوبة")
       return
     }
 
-    addUnit({
-      number: formData.number,
-      name: formData.name,
-      type: formData.type,
-      floor: formData.floor,
-      pricePerNight: Number(formData.pricePerNight),
-      status: formData.status,
-    })
+    try {
+      setUploading(true)
 
-    toast.success("تم إضافة الوحدة بنجاح")
-    onOpenChange(false)
-    setFormData({ number: "", name: "", type: "room", floor: "1", pricePerNight: "", status: "vacant" })
+      // Upload images if any
+      let imageUrls: string[] = []
+      if (files.length > 0) {
+        toast.info("جاري رفع الصور...")
+        const uploadResult = await uploadMultipleImagesToStorage(files, "rooms")
+
+        if (!uploadResult.success) {
+          toast.error("فشل رفع بعض الصور")
+          if (uploadResult.errors.length > 0) {
+            console.error("Upload errors:", uploadResult.errors)
+          }
+        } else {
+          imageUrls = uploadResult.urls
+        }
+      }
+
+      // Add the unit to the store
+      addUnit({
+        number: formData.number,
+        name: formData.name,
+        type: formData.type,
+        floor: formData.floor,
+        pricePerNight: Number(formData.pricePerNight),
+        status: formData.status,
+        imageUrls, // Add the uploaded image URLs
+      })
+
+      toast.success("تم إضافة الوحدة بنجاح")
+      onOpenChange(false)
+      setFormData({ number: "", name: "", type: "room", floor: "1", pricePerNight: "", status: "vacant" })
+      setFiles([])
+    } catch (error) {
+      console.error("Error adding unit:", error)
+      toast.error("حدث خطأ أثناء إضافة الوحدة")
+    } finally {
+      setUploading(false)
+    }
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px] bg-card border-border" dir="rtl">
+      <DialogContent className="sm:max-w-[525px] bg-card border-border max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="text-foreground">إضافة وحدة جديدة</DialogTitle>
         </DialogHeader>
@@ -119,12 +151,32 @@ export function AddUnitModal({ open, onOpenChange }: AddUnitModalProps) {
             </div>
           </div>
 
+          {/* Image Upload Section */}
+          <div className="space-y-2">
+            <Label>صور الوحدة</Label>
+            <FileUpload
+              onFilesChange={setFiles}
+              maxFiles={5}
+              label="رفع صور للوحدة"
+            />
+          </div>
+
           <DialogFooter className="gap-2 sm:gap-0">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} className="rounded-xl">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              className="rounded-xl"
+              disabled={uploading}
+            >
               إلغاء
             </Button>
-            <Button type="submit" className="rounded-xl">
-              إضافة الوحدة
+            <Button
+              type="submit"
+              className="rounded-xl"
+              disabled={uploading}
+            >
+              {uploading ? "جاري الإضافة..." : "إضافة الوحدة"}
             </Button>
           </DialogFooter>
         </form>

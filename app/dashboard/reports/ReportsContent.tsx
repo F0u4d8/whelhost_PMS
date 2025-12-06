@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { requireAuth } from "@/lib/auth";
+import { requirePremium } from "@/lib/premium";
 import ReportsServer from "./ReportsServer";
 
 interface ReportData {
@@ -251,8 +251,8 @@ async function getReportData(hotelId: string): Promise<ReportData> {
 }
 
 export default async function ReportsContent() {
+  const { user } = await requirePremium();
   const supabase = await createClient();
-  const user = await requireAuth();
 
   // Get hotel ID for the logged-in user
   const { data: userHotel, error: hotelError } = await supabase

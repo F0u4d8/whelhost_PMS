@@ -14,6 +14,7 @@ export interface Unit {
   floor?: string
   pricePerNight?: number
   propertyId?: string
+  imageUrls?: string[] // Array of image URLs for the unit
 }
 
 export interface Guest {

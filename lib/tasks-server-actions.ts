@@ -18,7 +18,11 @@ export interface Task {
   completedAt?: string;
 }
 
-export async function getTasks(): Promise<Task[]> {
+/**
+ * Get all tasks for a user's hotels
+ * @param {string} [unitId] - Optional unit ID to filter tasks by unit
+ */
+export async function getTasks(unitId?: string): Promise<Task[]> {
   const supabase = await createClient();
   const user = await requireAuth();
 
@@ -50,8 +54,8 @@ export async function getTasks(): Promise<Task[]> {
   let tasks: Task[] = [];
 
   try {
-    // Get tasks for the user's hotels - try full schema first, then basic
-    const { data: tasksData, error: tasksError } = await supabase
+    // Build query based on whether we're filtering by unitId
+    let query = supabase
       .from("tasks")
       .select(`
         id,
@@ -68,23 +72,42 @@ export async function getTasks(): Promise<Task[]> {
       `)
       .in("hotel_id", hotelIds);
 
+    // If unitId is specified, filter tasks by that unit
+    if (unitId) {
+      query = query.eq("unit_id", unitId);
+    }
+
+    const { data: tasksData, error: tasksError } = await query;
+
     if (tasksError) {
       console.warn("Error fetching tasks with full schema:", tasksError.message);
 
       // Fallback: try basic schema
-      const { data: basicTasksData, error: basicTasksError } = await supabase
+      let basicQuery = supabase
         .from("tasks")
         .select("id, title, description, type, assigned_to, due_date, priority, status, created_at")
         .in("hotel_id", hotelIds);
+
+      if (unitId) {
+        basicQuery = basicQuery.eq("unit_id", unitId);
+      }
+
+      const { data: basicTasksData, error: basicTasksError } = await basicQuery;
 
       if (basicTasksError) {
         console.warn("Error fetching basic tasks:", basicTasksError.message);
 
         // Fallback 2: try minimal schema
-        const { data: minimalTasksData, error: minimalTasksError } = await supabase
+        let minimalQuery = supabase
           .from("tasks")
           .select("id, title, type, assigned_to, due_date, priority, status")
           .in("hotel_id", hotelIds);
+
+        if (unitId) {
+          minimalQuery = minimalQuery.eq("unit_id", unitId);
+        }
+
+        const { data: minimalTasksData, error: minimalTasksError } = await minimalQuery;
 
         if (minimalTasksError) {
           console.warn("Error fetching minimal tasks:", minimalTasksError.message);
@@ -97,7 +120,7 @@ export async function getTasks(): Promise<Task[]> {
             title: item.title || "Task",
             description: "",
             type: (item.type as Task["type"]) || "other",
-            unitId: undefined,
+            unitId: unitId,
             unitNumber: undefined,
             assignedTo: item.assigned_to || "",
             dueDate: item.due_date || new Date().toISOString().split('T')[0],
@@ -112,7 +135,7 @@ export async function getTasks(): Promise<Task[]> {
           title: item.title || "Task",
           description: item.description || "",
           type: (item.type as Task["type"]) || "other",
-          unitId: undefined,
+          unitId: unitId,
           unitNumber: undefined,
           assignedTo: item.assigned_to || "",
           dueDate: item.due_date || new Date().toISOString().split('T')[0],
@@ -157,7 +180,161 @@ export async function getTasks(): Promise<Task[]> {
         console.warn("Error fetching units for tasks:", unitsError.message);
       } else {
         const unitMap = new Map(unitsData.map(unit => [unit.id, unit.number]));
-        
+
+        tasks = tasks.map(task => ({
+          ...task,
+          unitNumber: unitMap.get(task.unitId || '') || task.unitNumber
+        }));
+      }
+    }
+  }
+
+  return tasks;
+}
+
+export async function getTasksByUnitId(unitId: string): Promise<Task[]> {
+  const supabase = await createClient();
+  const user = await requireAuth();
+
+  // First get the user's hotels
+  const { data: userHotels, error: hotelError } = await supabase
+    .from("hotels")
+    .select("id")
+    .eq("owner_id", user.id);
+
+  if (hotelError || !userHotels || userHotels.length === 0) {
+    console.error("Error fetching user hotels:", hotelError);
+    return [];
+  }
+
+  const hotelIds = userHotels.map(hotel => hotel.id);
+
+  // First check if tasks table exists
+  const { error: tableCheckError } = await supabase
+    .from("tasks")
+    .select("id")
+    .limit(1);
+
+  if (tableCheckError && tableCheckError.message.includes("does not exist")) {
+    console.warn("Tasks table does not exist in the database");
+    // Return an empty array since the table doesn't exist
+    return [];
+  }
+
+  let tasks: Task[] = [];
+
+  try {
+    // Get tasks for the specific unit
+    const { data: tasksData, error: tasksError } = await supabase
+      .from("tasks")
+      .select(`
+        id,
+        title,
+        description,
+        type,
+        unit_id,
+        assigned_to,
+        due_date,
+        priority,
+        status,
+        created_at,
+        completed_at
+      `)
+      .in("hotel_id", hotelIds)
+      .eq("unit_id", unitId);
+
+    if (tasksError) {
+      console.warn("Error fetching tasks with full schema:", tasksError.message);
+
+      // Fallback: try basic schema
+      const { data: basicTasksData, error: basicTasksError } = await supabase
+        .from("tasks")
+        .select("id, title, description, type, assigned_to, due_date, priority, status, created_at")
+        .in("hotel_id", hotelIds)
+        .eq("unit_id", unitId);
+
+      if (basicTasksError) {
+        console.warn("Error fetching basic tasks:", basicTasksError.message);
+
+        // Fallback 2: try minimal schema
+        const { data: minimalTasksData, error: minimalTasksError } = await supabase
+          .from("tasks")
+          .select("id, title, type, assigned_to, due_date, priority, status")
+          .in("hotel_id", hotelIds)
+          .eq("unit_id", unitId);
+
+        if (minimalTasksError) {
+          console.warn("Error fetching minimal tasks:", minimalTasksError.message);
+          // If no tasks table exists, return an empty array as a last resort
+          console.warn("Returning empty tasks array due to database errors");
+          return [];
+        } else {
+          tasks = minimalTasksData.map(item => ({
+            id: item.id,
+            title: item.title || "Task",
+            description: "",
+            type: (item.type as Task["type"]) || "other",
+            unitId: item.unit_id,
+            unitNumber: undefined,
+            assignedTo: item.assigned_to || "",
+            dueDate: item.due_date || new Date().toISOString().split('T')[0],
+            priority: (item.priority as Task["priority"]) || "medium",
+            status: (item.status as Task["status"]) || "todo",
+            createdAt: new Date().toISOString(),
+          }));
+        }
+      } else {
+        tasks = basicTasksData.map(item => ({
+          id: item.id,
+          title: item.title || "Task",
+          description: item.description || "",
+          type: (item.type as Task["type"]) || "other",
+          unitId: item.unit_id,
+          unitNumber: undefined,
+          assignedTo: item.assigned_to || "",
+          dueDate: item.due_date || new Date().toISOString().split('T')[0],
+          priority: (item.priority as Task["priority"]) || "medium",
+          status: (item.status as Task["status"]) || "todo",
+          createdAt: item.created_at || new Date().toISOString(),
+        }));
+      }
+    } else {
+      tasks = tasksData.map(item => ({
+        id: item.id,
+        title: item.title || "Task",
+        description: item.description || "",
+        type: (item.type as Task["type"]) || "other",
+        unitId: item.unit_id,
+        unitNumber: undefined, // Will populate separately if needed
+        assignedTo: item.assigned_to || "",
+        dueDate: item.due_date || new Date().toISOString().split('T')[0],
+        priority: (item.priority as Task["priority"]) || "medium",
+        status: (item.status as Task["status"]) || "todo",
+        createdAt: item.created_at || new Date().toISOString(),
+        completedAt: item.completed_at,
+      }));
+    }
+  } catch (error) {
+    console.warn("Error querying tasks table, may not exist:", error);
+    // If tasks table doesn't exist, return an empty array as a last resort
+    console.warn("Returning empty tasks array due to database errors");
+    return [];
+  }
+
+  // If there are unit IDs in the tasks, get the unit numbers
+  if (tasks.length > 0) {
+    const unitIds = tasks.filter(task => task.unitId).map(task => task.unitId!) as string[];
+    if (unitIds.length > 0) {
+      const { data: unitsData, error: unitsError } = await supabase
+        .from("units")
+        .select("id, name as number")
+        .in("id", unitIds);
+
+      if (unitsError) {
+        console.warn("Error fetching units for tasks:", unitsError.message);
+      } else {
+        const unitMap = new Map(unitsData.map(unit => [unit.id, unit.number]));
+
         tasks = tasks.map(task => ({
           ...task,
           unitNumber: unitMap.get(task.unitId || '') || task.unitNumber
