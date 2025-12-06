@@ -12,6 +12,7 @@ import { Search, Plus, CalendarDays, CreditCard, Clock, CheckCircle, Eye, Trash2
 import { cn } from "@/lib/utils"
 import { usePMSStore } from "@/lib/store"
 import { AddReservationModal } from "@/components/modals/add-reservation-modal"
+import { ViewReservationModal } from "@/components/modals/view-reservation-modal"
 import { Toaster, toast } from "sonner"
 
 const statusConfig = {
@@ -25,6 +26,8 @@ const statusConfig = {
 export default function ReservationsPage() {
   const { reservations, deleteReservation } = usePMSStore()
   const [addModalOpen, setAddModalOpen] = useState(false)
+  const [viewModalOpen, setViewModalOpen] = useState(false)
+  const [selectedReservation, setSelectedReservation] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState("")
 
   const filteredReservations = useMemo(() => {
@@ -41,6 +44,11 @@ export default function ReservationsPage() {
   const handleDelete = (id: string) => {
     deleteReservation(id)
     toast.success("تم حذف الحجز بنجاح")
+  }
+
+  const handleViewReservation = (id: string) => {
+    setSelectedReservation(id)
+    setViewModalOpen(true)
   }
 
   return (
@@ -120,7 +128,12 @@ export default function ReservationsPage() {
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 rounded-lg"
+                          onClick={() => handleViewReservation(res.id)}
+                        >
                           <Eye className="h-4 w-4" />
                         </Button>
                         <Button
@@ -140,6 +153,11 @@ export default function ReservationsPage() {
           </Table>
         </div>
       <AddReservationModal open={addModalOpen} onOpenChange={setAddModalOpen} />
+      <ViewReservationModal
+        open={viewModalOpen}
+        onOpenChange={setViewModalOpen}
+        reservationId={selectedReservation}
+      />
     </MainLayout>
   )
 }

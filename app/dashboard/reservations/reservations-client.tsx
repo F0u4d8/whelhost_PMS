@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useMemo } from "react"
+import Link from "next/link"
 import { MainLayout } from "@/components/main-layout"
 import { KPICard } from "@/components/kpi-card"
 import { Button } from "@/components/ui/button"
@@ -265,9 +266,11 @@ export default function ReservationsClient({ initialData }: ReservationsClientPr
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center gap-1">
-                        <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
-                          <Eye className="h-4 w-4" />
-                        </Button>
+                        <Link href={`/dashboard/reservations/${res.id}`}>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg">
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                        </Link>
                         <Button
                           variant="ghost"
                           size="icon"

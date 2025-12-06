@@ -7,7 +7,7 @@ import { UnitCard } from "@/components/unit-card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Grid3X3, List, Plus, AlertCircle, CalendarCheck, UserX, LogIn, LogOut } from "lucide-react";
+import { Search, Grid3X3, List, Plus, AlertCircle, CalendarCheck, UserX, LogIn, LogOut, Download, FileText } from "lucide-react";
 import { Unit } from "@/lib/units-server-actions";
 import { addUnit as addUnitAction, updateUnit as updateUnitAction, deleteUnit as deleteUnitAction } from "@/lib/units-server-actions";
 import { AddUnitModal } from "@/components/modals/add-unit-modal";
@@ -86,6 +86,157 @@ export default function UnitsClient({ initialUnits }: UnitsClientProps) {
     setAddModalOpen(true);
   };
 
+  // Export functions
+  const exportToCSV = () => {
+    if (filteredUnits.length === 0) {
+      toast.error("لا توجد وحدات لتصديرها");
+      return;
+    }
+
+    // Create CSV content
+    const headers = ['الرقم', 'الاسم', 'النوع', 'الحالة', 'الطابق', 'السعر الأساسي', 'الضيوف'];
+    const csvContent = [
+      headers.join(','),
+      ...filteredUnits.map(unit => [
+        unit.number || '',
+        unit.name || '',
+        unit.type || '',
+        unit.status === 'occupied' ? 'مشغول' :
+        unit.status === 'vacant' ? 'شاغر' :
+        unit.status === 'out-of-service' ? 'خارج الخدمة' :
+        unit.status === 'departure-today' ? 'مغادرة اليوم' :
+        unit.status === 'arrival-today' ? 'وصول اليوم' :
+        unit.status || '',
+        unit.floor || '',
+        unit.roomType?.base_price || '',
+        unit.guest || ''
+      ].map(field => `"${field || ''}"`).join(','))
+    ].join('\n');
+
+    // Create and download the CSV file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `units-export-${new Date().toISOString().slice(0, 10)}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = () => {
+    if (filteredUnits.length === 0) {
+      toast.error("لا توجد وحدات لتصديرها");
+      return;
+    }
+
+    // Create a new window with the units table
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <!DOCTYPE html>
+        <html lang="ar" dir="rtl">
+        <head>
+          <meta charset="UTF-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title> تقرير الوحدات </title>
+          <style>
+            body {
+              font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+              margin: 20px;
+              background: #ffffff;
+              font-size: 14px;
+            }
+            .header {
+              text-align: center;
+              border-bottom: 2px solid #e5e7eb;
+              padding-bottom: 20px;
+              margin-bottom: 20px;
+            }
+            .units-table {
+              width: 100%;
+              border-collapse: collapse;
+              margin: 20px 0;
+            }
+            .units-table th,
+            .units-table td {
+              border: 1px solid #d1d5db;
+              padding: 10px;
+              text-align: right;
+            }
+            .units-table th {
+              background-color: #f3f4f6;
+              font-weight: bold;
+            }
+            @media print {
+              body { margin: 0; }
+              button { display: none; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <h1> تقرير الوحدات </h1>
+            <p> تم إنشاء التقرير في: ${new Date().toLocaleDateString('ar-EG')}</p>
+          </div>
+
+          <table class="units-table">
+            <thead>
+              <tr>
+                <th>الرقم</th>
+                <th>الاسم</th>
+                <th>النوع</th>
+                <th>الحالة</th>
+                <th>الطابق</th>
+                <th>السعر الأساسي</th>
+                <th>الضيوف</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${filteredUnits.map(unit => `
+                <tr>
+                  <td>${unit.number || ''}</td>
+                  <td>${unit.name || ''}</td>
+                  <td>${unit.type === 'suite' ? 'جناح' :
+                      unit.type === 'room' ? 'غرفة' :
+                      unit.type === 'studio' ? 'استوديو' :
+                      unit.type || ''}</td>
+                  <td>${unit.status === 'occupied' ? 'مشغول' :
+                      unit.status === 'vacant' ? 'شاغر' :
+                      unit.status === 'out-of-service' ? 'خارج الخدمة' :
+                      unit.status === 'departure-today' ? 'مغادرة اليوم' :
+                      unit.status === 'arrival-today' ? 'وصول اليوم' :
+                      unit.status || ''}</td>
+                  <td>${unit.floor || ''}</td>
+                  <td>${unit.roomType?.base_price || ''}</td>
+                  <td>${unit.guest || ''}</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+
+          <script>
+            window.onload = function() {
+              window.print();
+              window.close();
+            };
+          </script>
+        </body>
+        </html>
+      `);
+      printWindow.document.close();
+    }
+  };
+
+  const handleExport = (format: 'csv' | 'pdf') => {
+    if (format === 'csv') {
+      exportToCSV();
+    } else {
+      exportToPDF();
+    }
+  };
+
   return (
     <MainLayout>
       <Toaster position="top-center" richColors />
@@ -97,13 +248,23 @@ export default function UnitsClient({ initialUnits }: UnitsClientProps) {
             <h1 className="text-3xl font-bold text-foreground">الوحدات</h1>
             <p className="text-muted-foreground mt-1">إدارة وحدات الإقامة</p>
           </div>
-          <Button className="rounded-xl gap-2" onClick={() => {
-            setEditingUnit(null);
-            setAddModalOpen(true);
-          }}>
-            <Plus className="h-4 w-4" />
-            إضافة وحدة
-          </Button>
+          <div className="flex gap-2">
+            <Button className="rounded-xl gap-2" onClick={() => {
+              setEditingUnit(null);
+              setAddModalOpen(true);
+            }}>
+              <Plus className="h-4 w-4" />
+              إضافة وحدة
+            </Button>
+            <Button variant="outline" className="rounded-xl gap-2" onClick={() => handleExport('csv')}>
+              <Download className="h-4 w-4" />
+              CSV
+            </Button>
+            <Button variant="outline" className="rounded-xl gap-2" onClick={() => handleExport('pdf')}>
+              <FileText className="h-4 w-4" />
+              PDF
+            </Button>
+          </div>
         </div>
 
         {/* KPI Cards */}
